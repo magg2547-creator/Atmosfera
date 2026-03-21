@@ -559,8 +559,6 @@ function renderDashboard() {
   renderAqiBanner();
   renderInsightPanel();
   renderStatusStrip();
-  evaluateAlerts();
-  renderAlerts();
 }
 
 // ════════════════════════════════════════════════════════════
