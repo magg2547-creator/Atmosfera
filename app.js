@@ -1635,7 +1635,7 @@ function initApp() {
   requestAnimationFrame(() => resizeAllCharts());
 }
 
-ffunction resizeAllCharts() {
+function resizeAllCharts() {
   Object.values(charts).forEach(chart => {
     if (!chart) return;
     chart.resize();
