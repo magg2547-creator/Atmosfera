@@ -1754,11 +1754,6 @@ function bindEvents() {
     });
   });
 
-  DOM.alertList()?.addEventListener('click', e => {
-    const btn = e.target.closest('[data-ack-alert]');
-    if (btn) acknowledgeAlert(btn.dataset.ackAlert);
-  });
-
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.classList.remove('open'); });
   });
