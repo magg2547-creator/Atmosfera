@@ -247,30 +247,36 @@
           <button class="range-chip" data-range-preset="today">Today</button>
           <button class="range-chip" data-range-preset="7d">7 Days</button>
           <button class="range-chip" data-range-preset="30d">30 Days</button>
-          <button class="range-chip" data-range-preset="custom">Custom</button>
-        </div>
-        <div class="range-inputs">
-          <input class="table-date" type="date" id="range-from" disabled>
-          <span class="range-sep">to</span>
-          <input class="table-date" type="date" id="range-to" disabled>
         </div>
       </div>
       <input class="table-search" type="text" id="table-search" placeholder="Search records...">
     </div>
     <div class="range-summary" id="range-summary">Date range: All records</div>
     <div class="table-scroll">
-      <table>
+      <table class="records-table">
+        <colgroup>
+          <col class="col-time">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-electric">
+          <col class="col-electric">
+          <col class="col-electric">
+          <col class="col-energy">
+        </colgroup>
         <thead><tr>
-          <th data-sort="time" id="th-time">Time <span class="sort-icon">^v</span></th>
-          <th data-sort="pm25" id="th-pm25">PM 2.5 <span class="sort-icon">^v</span></th>
-          <th data-sort="pm10" id="th-pm10">PM 10 <span class="sort-icon">^v</span></th>
-          <th data-sort="temp" id="th-temp">Temp <span class="sort-icon">^v</span></th>
-          <th data-sort="hum" id="th-hum">Humidity <span class="sort-icon">^v</span></th>
-          <th data-sort="co2" id="th-co2">CO2 <span class="sort-icon">^v</span></th>
-          <th data-sort="volt" id="th-volt">Voltage <span class="sort-icon">^v</span></th>
-          <th data-sort="curr" id="th-curr">Current <span class="sort-icon">^v</span></th>
-          <th data-sort="pwr" id="th-pwr">Power <span class="sort-icon">^v</span></th>
-          <th data-sort="energy" id="th-energy">Energy <span class="sort-icon">^v</span></th>
+          <th data-sort="time" id="th-time"><span class="th-shell"><span class="th-copy"><span class="th-label">Recorded</span><span class="th-meta">Date and time</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm25" id="th-pm25"><span class="th-shell"><span class="th-copy"><span class="th-label">PM2.5</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm10" id="th-pm10"><span class="th-shell"><span class="th-copy"><span class="th-label">PM10</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="temp" id="th-temp"><span class="th-shell"><span class="th-copy"><span class="th-label">Temperature</span><span class="th-meta">&deg;C</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="hum" id="th-hum"><span class="th-shell"><span class="th-copy"><span class="th-label">Humidity</span><span class="th-meta">%</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="co2" id="th-co2"><span class="th-shell"><span class="th-copy"><span class="th-label">CO2</span><span class="th-meta">ppm</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="volt" id="th-volt"><span class="th-shell"><span class="th-copy"><span class="th-label">Voltage</span><span class="th-meta">V</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="curr" id="th-curr"><span class="th-shell"><span class="th-copy"><span class="th-label">Current</span><span class="th-meta">A</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pwr" id="th-pwr"><span class="th-shell"><span class="th-copy"><span class="th-label">Power</span><span class="th-meta">W</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="energy" id="th-energy"><span class="th-shell"><span class="th-copy"><span class="th-label">Energy</span><span class="th-meta">kWh</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
         </tr></thead>
         <tbody id="table-body"></tbody>
       </table>

@@ -42,72 +42,100 @@ const state = {
 // ════════════════════════════════════════════════════════════
 //  C. DOM CACHE
 // ════════════════════════════════════════════════════════════
+const domIdCache = new Map();
+const domQueryCache = new Map();
+
+function byId(id) {
+  if (!domIdCache.has(id)) {
+    domIdCache.set(id, document.getElementById(id));
+  }
+  return domIdCache.get(id);
+}
+
+function queryAllCached(selector) {
+  if (!domQueryCache.has(selector)) {
+    domQueryCache.set(selector, [...document.querySelectorAll(selector)]);
+  }
+  return domQueryCache.get(selector);
+}
+
+function queryOneCached(selector) {
+  return queryAllCached(selector)[0] || null;
+}
+
 const DOM = {
   // Clock
-  heroDate:      () => document.getElementById('hero-date'),
-  heroClock:     () => document.getElementById('hero-clock'),
+  heroDate:      () => byId('hero-date'),
+  heroClock:     () => byId('hero-clock'),
   // AQI Banner
-  aqiScore:      () => document.getElementById('aqi-score'),
-  aqiStatusText: () => document.getElementById('aqi-status-text'),
-  aqiDot:        () => document.getElementById('aqi-dot'),
-  bannerPm25:    () => document.getElementById('banner-pm25'),
-  bannerPm10:    () => document.getElementById('banner-pm10'),
-  bannerCo2:     () => document.getElementById('banner-co2'),
-  gaugePm25:     () => document.getElementById('gauge-pm25'),
-  gaugePm10:     () => document.getElementById('gauge-pm10'),
-  gaugeCo2:      () => document.getElementById('gauge-co2'),
-  miniTemp:      () => document.getElementById('mini-temp'),
-  miniHum:       () => document.getElementById('mini-hum'),
-  miniPwr:       () => document.getElementById('mini-pwr'),
+  aqiScore:      () => byId('aqi-score'),
+  aqiStatusText: () => byId('aqi-status-text'),
+  aqiDot:        () => byId('aqi-dot'),
+  bannerPm25:    () => byId('banner-pm25'),
+  bannerPm10:    () => byId('banner-pm10'),
+  bannerCo2:     () => byId('banner-co2'),
+  gaugePm25:     () => byId('gauge-pm25'),
+  gaugePm10:     () => byId('gauge-pm10'),
+  gaugeCo2:      () => byId('gauge-co2'),
+  miniTemp:      () => byId('mini-temp'),
+  miniHum:       () => byId('mini-hum'),
+  miniPwr:       () => byId('mini-pwr'),
   // Status strip
-  statusLast:    () => document.getElementById('status-last'),
-  statusFeed:    () => document.getElementById('status-feed'),
-  statusFeedHealth: () => document.getElementById('status-feed-health'),
-  statusFeedNote:   () => document.getElementById('status-feed-note'),
-  statusSensorHealth: () => document.getElementById('status-sensor-health'),
-  statusSensorNote:   () => document.getElementById('status-sensor-note'),
-  statusTrend:   () => document.getElementById('status-trend'),
-  statusAlerts:  () => document.getElementById('status-alerts'),
+  statusLast:    () => byId('status-last'),
+  statusFeed:    () => byId('status-feed'),
+  statusFeedHealth: () => byId('status-feed-health'),
+  statusFeedNote:   () => byId('status-feed-note'),
+  statusSensorHealth: () => byId('status-sensor-health'),
+  statusSensorNote:   () => byId('status-sensor-note'),
+  statusTrend:   () => byId('status-trend'),
+  statusAlerts:  () => byId('status-alerts'),
   // Metric cards
-  valPm25:       () => document.getElementById('val-pm25'),
-  valPm10:       () => document.getElementById('val-pm10'),
-  valTemp:       () => document.getElementById('val-temp'),
-  valHum:        () => document.getElementById('val-hum'),
-  valCo2:        () => document.getElementById('val-co2'),
-  valVolt:       () => document.getElementById('val-volt'),
-  valCurr:       () => document.getElementById('val-curr'),
-  deltaPm25:     () => document.getElementById('delta-pm25'),
-  deltaPm10:     () => document.getElementById('delta-pm10'),
-  deltaTemp:     () => document.getElementById('delta-temp'),
-  deltaHum:      () => document.getElementById('delta-hum'),
-  deltaCo2:      () => document.getElementById('delta-co2'),
-  deltaVolt:     () => document.getElementById('delta-volt'),
-  deltaCurr:     () => document.getElementById('delta-curr'),
+  valPm25:       () => byId('val-pm25'),
+  valPm10:       () => byId('val-pm10'),
+  valTemp:       () => byId('val-temp'),
+  valHum:        () => byId('val-hum'),
+  valCo2:        () => byId('val-co2'),
+  valVolt:       () => byId('val-volt'),
+  valCurr:       () => byId('val-curr'),
+  deltaPm25:     () => byId('delta-pm25'),
+  deltaPm10:     () => byId('delta-pm10'),
+  deltaTemp:     () => byId('delta-temp'),
+  deltaHum:      () => byId('delta-hum'),
+  deltaCo2:      () => byId('delta-co2'),
+  deltaVolt:     () => byId('delta-volt'),
+  deltaCurr:     () => byId('delta-curr'),
   // Insight panel
-  insightPwr:    () => document.getElementById('insight-pwr'),
-  insightEnergy: () => document.getElementById('insight-energy'),
-  insightPf:     () => document.getElementById('insight-pf'),
-  insightEff:    () => document.getElementById('insight-eff'),
-  barPwr:        () => document.getElementById('bar-pwr'),
-  barEnergy:     () => document.getElementById('bar-energy'),
-  barPf:         () => document.getElementById('bar-pf'),
+  insightPwr:    () => byId('insight-pwr'),
+  insightEnergy: () => byId('insight-energy'),
+  insightPf:     () => byId('insight-pf'),
+  insightEff:    () => byId('insight-eff'),
+  barPwr:        () => byId('bar-pwr'),
+  barEnergy:     () => byId('bar-energy'),
+  barPf:         () => byId('bar-pf'),
   // Table
-  tableSearch:   () => document.getElementById('table-search'),
-  rangeSummary:  () => document.getElementById('range-summary'),
-  rangeFrom:     () => document.getElementById('range-from'),
-  rangeTo:       () => document.getElementById('range-to'),
-  tableBody:     () => document.getElementById('table-body'),
-  pageInfo:      () => document.getElementById('page-info'),
-  pageNumbers:   () => document.getElementById('page-numbers'),
-  btnPrev:       () => document.getElementById('btn-prev'),
-  btnNext:       () => document.getElementById('btn-next'),
+  tableSearch:   () => byId('table-search'),
+  rangeSummary:  () => byId('range-summary'),
+  rangeFrom:     () => byId('range-from'),
+  rangeTo:       () => byId('range-to'),
+  tableBody:     () => byId('table-body'),
+  pageInfo:      () => byId('page-info'),
+  pageNumbers:   () => byId('page-numbers'),
+  btnPrev:       () => byId('btn-prev'),
+  btnNext:       () => byId('btn-next'),
+  sortHeaders:   () => queryAllCached('thead th[data-sort]'),
+  rangeChips:    () => queryAllCached('.range-chip'),
+  tableFilters:  () => queryAllCached('.table-filter'),
+  chartTabs:     () => queryAllCached('.chart-tab'),
+  modalBackdrops: () => queryAllCached('.modal-backdrop'),
+  closeButtons:  () => queryAllCached('[data-close]'),
+  navLogo:       () => queryOneCached('.nav-logo'),
   // Toast
-  toast:         () => document.getElementById('toast'),
-  toastMessage:  () => document.getElementById('toast-message'),
+  toast:         () => byId('toast'),
+  toastMessage:  () => byId('toast-message'),
   // Refresh button
-  btnRefresh:    () => document.getElementById('btn-refresh'),
+  btnRefresh:    () => byId('btn-refresh'),
   // Skeleton overlays
-  skeletons:     () => ['sk-pm25','sk-pm10','sk-temp','sk-hum','sk-volt','sk-curr','sk-insight'].map(id => document.getElementById(id)).filter(Boolean),
+  skeletons:     () => ['sk-pm25','sk-pm10','sk-temp','sk-hum','sk-volt','sk-curr','sk-insight'].map(id => byId(id)).filter(Boolean),
 };
 
 // ════════════════════════════════════════════════════════════
@@ -119,6 +147,30 @@ function setHTML(el, html) { if (el) el.innerHTML = html; }
 function setText(el, text) { if (el) el.textContent = text; }
 function setWidth(el, pct)  { if (el) el.style.width = Math.min(100, Math.max(0, pct)) + '%'; }
 
+const DATE_FORMATTERS = Object.freeze({
+  time: new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }),
+  timeShort: new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+  tableDateTime: new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+  tableDate: new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }),
+});
+
 function syncPowerUnitUI() {
   const miniUnit = DOM.miniPwr()?.querySelector('.aqi-mini-unit');
   if (miniUnit) miniUnit.textContent = 'W';
@@ -126,15 +178,15 @@ function syncPowerUnitUI() {
   const insightUnit = DOM.insightPwr()?.querySelector('span');
   if (insightUnit) insightUnit.textContent = 'W';
 
-  const energyLegend = [...document.querySelectorAll('.chart-legend .legend-item')]
+  const energyLegend = queryAllCached('.chart-legend .legend-item')
     .find(el => el.textContent.includes('Power'));
   if (energyLegend) energyLegend.innerHTML = '<div class="legend-dot" style="background:#006977"></div>Power (W)';
 
-  const powerLabel = document.querySelector('label[for="thr-pwr"]') ||
-    [...document.querySelectorAll('.modal-label')].find(el => el.textContent.includes('Power Max'));
+  const powerLabel = queryOneCached('label[for="thr-pwr"]') ||
+    queryAllCached('.modal-label').find(el => el.textContent.includes('Power Max'));
   if (powerLabel) powerLabel.textContent = 'Power Max (W)';
 
-  const powerInput = document.getElementById('thr-pwr');
+  const powerInput = byId('thr-pwr');
   if (powerInput) {
     powerInput.value = '3000';
     powerInput.step = '10';
@@ -168,11 +220,21 @@ function applyDelta(el, diff, unit) {
 
 function formatTime(date) {
   if (!(date instanceof Date) || isNaN(date)) return '—';
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return DATE_FORMATTERS.time.format(date);
 }
 function formatTimeShort(date) {
   if (!(date instanceof Date) || isNaN(date)) return '—';
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return DATE_FORMATTERS.timeShort.format(date);
+}
+function formatTableTime(date) {
+  if (!(date instanceof Date) || isNaN(date)) return 'â€”';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -420,13 +482,12 @@ function renderTable() {
   if (!tbody) return;
 
   if (page.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" class="no-results">No matching records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="no-results">No matching records found</td></tr>`;
   } else {
     tbody.innerHTML = page.map(r => {
-      const badgeClass = r.status === 'Good' ? 'badge-good' : r.status === 'Attention' ? 'badge-alert' : 'badge-moderate';
       const badgeIcon  = r.status === 'Good' ? '✓' : r.status === 'Attention' ? '⚠' : '~';
       return `<tr>
-        <td class="td-time">${formatTime(r.time)}</td>
+        <td class="td-time"><span class="td-date">${formatTableDate(r.time)}</span><span class="td-clock">${formatTableClock(r.time)}</span></td>
         <td class="td-value">${fmt(r.pm25)}</td>
         <td class="td-value">${fmt(r.pm10)}</td>
         <td class="td-value">${fmt(r.temp)}°</td>
@@ -478,7 +539,7 @@ function filterRows(rows) {
   return rows.filter(r => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     if (query) {
-      const haystack = `${formatTime(r.time)} ${r.pm25} ${r.pm10} ${r.temp} ${r.hum} ${r.co2} ${r.volt} ${r.curr} ${r.pwr} ${r.energy} ${r.status}`.toLowerCase();
+      const haystack = `${formatTableTime(r.time)} ${r.pm25} ${r.pm10} ${r.temp} ${r.hum} ${r.co2} ${r.volt} ${r.curr} ${r.pwr} ${r.energy} ${r.status}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
     return true;
@@ -531,8 +592,8 @@ function applySortLegacy(key) {
 
 function applyFilter(filterValue) {
   state.table.filterStatus = filterValue;
-  document.querySelectorAll('.table-filter').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.table-filter[data-filter="${filterValue}"]`);
+  DOM.tableFilters().forEach(b => b.classList.remove('active'));
+  const btn = queryOneCached(`.table-filter[data-filter="${filterValue}"]`);
   if (btn) btn.classList.add('active');
   recomputeTableView();
 }
@@ -588,7 +649,7 @@ function initCharts() {
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.color = '#5a6a72';
 
-  const aqCtx = document.getElementById('chart-aq').getContext('2d');
+  const aqCtx = byId('chart-aq').getContext('2d');
   charts.aq = new Chart(aqCtx, {
     type: 'line',
     data: { labels: chartData.aq.labels, datasets: [
@@ -607,7 +668,7 @@ function initCharts() {
     },
   });
 
-  const co2Ctx = document.getElementById('chart-co2').getContext('2d');
+  const co2Ctx = byId('chart-co2').getContext('2d');
   charts.co2 = new Chart(co2Ctx, {
     type: 'line',
     data: { labels: chartData.co2.labels, datasets: [
@@ -624,7 +685,7 @@ function initCharts() {
     },
   });
 
-  const enCtx = document.getElementById('chart-energy').getContext('2d');
+  const enCtx = byId('chart-energy').getContext('2d');
   charts.energy = new Chart(enCtx, {
     type: 'line',
     data: { labels: chartData.energy.labels, datasets: [
@@ -649,7 +710,7 @@ function initCharts() {
   });
 
   // CO2 Donut
-  const donutCtx = document.getElementById('chart-donut').getContext('2d');
+  const donutCtx = byId('chart-donut').getContext('2d');
   charts.donut = new Chart(donutCtx, {
     type: 'doughnut',
     data: { datasets: [{ data: [0, 100], backgroundColor: ['rgba(255,255,255,.7)', 'rgba(255,255,255,.12)'], borderWidth: 0, hoverOffset: 4 }] },
@@ -970,12 +1031,12 @@ function exportPDF() {
 // ════════════════════════════════════════════════════════════
 //  P. MODAL HELPERS
 // ════════════════════════════════════════════════════════════
-function openModal(id)  { const m = document.getElementById(id); if (m) m.classList.add('open'); }
-function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('open'); }
+function openModal(id)  { const m = byId(id); if (m) m.classList.add('open'); }
+function closeModal(id) { const m = byId(id); if (m) m.classList.remove('open'); }
 
 function saveThresholds() {
   const read = (id, fallback) => {
-    const value = parseFloat(document.getElementById(id)?.value);
+    const value = parseFloat(byId(id)?.value);
     return Number.isFinite(value) ? value : fallback;
   };
   state.thresholds.pm25 = read('thr-pm25', 35);
@@ -1032,6 +1093,17 @@ function formatDateTime(date) {
   });
 }
 
+function formatTableTime(date) {
+  if (!(date instanceof Date) || isNaN(date)) return 'â€”';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function formatDateInputValue(date) {
   if (!(date instanceof Date) || isNaN(date)) return '';
   const year = date.getFullYear();
@@ -1046,6 +1118,54 @@ function parseDateInput(value, endOfDay = false) {
   if (Number.isNaN(date.getTime())) return null;
   if (endOfDay) date.setHours(23, 59, 59, 999);
   return date;
+}
+
+function formatTableTime(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatTableDate(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatTableClock(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatDateTime(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return DATE_FORMATTERS.tableDateTime.format(date);
+}
+
+function formatTableTime(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return DATE_FORMATTERS.tableDateTime.format(date);
+}
+
+function formatTableDate(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return DATE_FORMATTERS.tableDate.format(date);
+}
+
+function formatTableClock(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '-';
+  return DATE_FORMATTERS.timeShort.format(date);
 }
 
 function humanizeDuration(ms) {
@@ -1154,7 +1274,7 @@ function getRangeSummaryText(count) {
 }
 
 function syncRangeControls() {
-  document.querySelectorAll('.range-chip').forEach(btn => {
+  DOM.rangeChips().forEach(btn => {
     btn.classList.toggle('active', btn.dataset.rangePreset === state.exportRange.preset);
   });
 
@@ -1371,7 +1491,7 @@ function filterRows(rows) {
     if (!matchesSelectedRange(r)) return false;
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     if (query) {
-      const haystack = `${formatTime(r.time)} ${r.pm25} ${r.pm10} ${r.temp} ${r.hum} ${r.co2} ${r.volt} ${r.curr} ${r.pwr} ${r.energy} ${r.status}`.toLowerCase();
+      const haystack = `${formatTableTime(r.time)} ${r.pm25} ${r.pm10} ${r.temp} ${r.hum} ${r.co2} ${r.volt} ${r.curr} ${r.pwr} ${r.energy} ${r.status}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
     return true;
@@ -1383,7 +1503,88 @@ function recomputeTableView() {
   state.filteredRows = getFilteredAndSortedRows(state.rows);
   syncRangeControls();
   setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
+  syncSortIndicators();
   renderTable();
+}
+
+function syncSortIndicators() {
+  DOM.sortHeaders().forEach(th => {
+    th.classList.remove('sorted');
+    delete th.dataset.sortDir;
+  });
+
+  const activeTh = byId('th-' + state.table.sortKey);
+  if (!activeTh) return;
+
+  activeTh.classList.add('sorted');
+  activeTh.dataset.sortDir = state.table.sortDir === 1 ? 'desc' : 'asc';
+}
+
+function applySort(key) {
+  if (state.table.sortKey === key) {
+    state.table.sortDir *= -1;
+  } else {
+    state.table.sortKey = key;
+    state.table.sortDir = 1;
+  }
+
+  recomputeTableView();
+}
+
+function renderTable() {
+  const { currentPage } = state.table;
+  const perPage = CONFIG.rowsPerPage;
+  const start = (currentPage - 1) * perPage;
+  const end = start + perPage;
+  const page = state.filteredRows.slice(start, end);
+  const total = state.filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  const tbody = DOM.tableBody();
+  if (!tbody) return;
+
+  if (page.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" class="no-results">No matching records found</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(row => `
+      <tr>
+        <td class="td-time">
+          <span class="td-date">${formatTableDate(row.time)}</span>
+          <span class="td-clock">${formatTableClock(row.time)}</span>
+        </td>
+        <td class="td-value">${fmt(row.pm25)}</td>
+        <td class="td-value">${fmt(row.pm10)}</td>
+        <td class="td-value">${fmt(row.temp)}</td>
+        <td class="td-value">${row.hum}</td>
+        <td class="td-value">${row.co2}</td>
+        <td class="td-value">${fmt(row.volt)}</td>
+        <td class="td-value">${fmt(row.curr, 2)}</td>
+        <td class="td-value">${fmt(row.pwr, 1)}</td>
+        <td class="td-value">${fmt(row.energy, 2)}</td>
+      </tr>
+    `).join('');
+  }
+
+  const rangeStart = total === 0 ? 0 : start + 1;
+  const rangeEnd = Math.min(end, total);
+  setText(DOM.pageInfo(), `Showing ${rangeStart}–${rangeEnd} of ${total} records`);
+  if (DOM.btnPrev()) DOM.btnPrev().disabled = currentPage <= 1;
+  if (DOM.btnNext()) DOM.btnNext().disabled = currentPage >= totalPages;
+
+  const pageNumbers = DOM.pageNumbers();
+  if (!pageNumbers) return;
+
+  const fragment = document.createDocumentFragment();
+  for (let pageNo = 1; pageNo <= totalPages; pageNo++) {
+    if (totalPages <= 7 || Math.abs(pageNo - currentPage) < 3 || pageNo === 1 || pageNo === totalPages) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (pageNo === currentPage ? ' active' : '');
+      btn.textContent = pageNo;
+      btn.dataset.page = pageNo;
+      fragment.appendChild(btn);
+    }
+  }
+  pageNumbers.replaceChildren(fragment);
 }
 
 function renderDashboard() {
@@ -1397,9 +1598,9 @@ function renderDashboard() {
 function exportCSV() {
   const rows = getExportRows();
   if (rows.length === 0) { showToast('No data to export for the selected range'); return; }
-  const header = 'Time,PM2.5 (ug/m3),PM10 (ug/m3),Temperature (C),Humidity (%),CO2 (ppm),Voltage (V),Current (A),Power (W),Energy (kWh),Status\n';
+  const header = 'Time,PM2.5 (\u00B5g/m\u00B3),PM10 (\u00B5g/m\u00B3),Temperature (C),Humidity (%),CO2 (ppm),Voltage (V),Current (A),Power (W),Energy (kWh),Status\n';
   const body = rows.map(r => {
-    const t = r.time instanceof Date && !isNaN(r.time) ? r.time.toLocaleString('en-GB') : '-';
+    const t = formatDateTime(r.time);
     return `${t},${fmt(r.pm25)},${fmt(r.pm10)},${fmt(r.temp)},${r.hum},${r.co2},${fmt(r.volt)},${fmt(r.curr, 2)},${fmt(r.pwr, 1)},${fmt(r.energy, 2)},${r.status}`;
   }).join('\n');
   const blobUrl = URL.createObjectURL(new Blob([header + body], { type: 'text/csv' }));
@@ -1556,56 +1757,60 @@ function saveThresholds() {
 }
 
 function bindEvents() {
-  document.getElementById('btn-refresh')?.addEventListener('click', manualRefresh);
-  document.getElementById('btn-export-pdf')?.addEventListener('click', exportPDF);
-  document.getElementById('btn-export')?.addEventListener('click', exportCSV);
+  byId('btn-refresh')?.addEventListener('click', manualRefresh);
+  byId('btn-export-pdf')?.addEventListener('click', exportPDF);
+  byId('btn-export')?.addEventListener('click', exportCSV);
 
-  document.getElementById('btn-scroll-table')?.addEventListener('click', () => {
-    document.getElementById('section-table')?.scrollIntoView({ behavior: 'smooth' });
+  byId('btn-scroll-table')?.addEventListener('click', () => {
+    byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
-  document.getElementById('btn-thresholds')?.addEventListener('click', () => openModal('modal-thresholds'));
-  document.getElementById('btn-download-csv')?.addEventListener('click', exportCSV);
+  byId('btn-thresholds')?.addEventListener('click', () => openModal('modal-thresholds'));
+  byId('btn-download-csv')?.addEventListener('click', exportCSV);
 
   DOM.tableSearch()?.addEventListener('input', recomputeTableView);
-  DOM.rangeFrom()?.addEventListener('change', updateCustomRange);
-  DOM.rangeTo()?.addEventListener('change', updateCustomRange);
 
-  document.querySelectorAll('.range-chip').forEach(btn => {
+  DOM.rangeChips().forEach(btn => {
     btn.addEventListener('click', () => applyRangePreset(btn.dataset.rangePreset));
   });
 
-  document.querySelectorAll('.table-filter').forEach(btn => {
+  DOM.tableFilters().forEach(btn => {
     btn.addEventListener('click', () => applyFilter(btn.dataset.filter));
   });
 
-  document.querySelectorAll('thead th[data-sort]').forEach(th => {
+  DOM.sortHeaders().forEach(th => {
     th.addEventListener('click', () => applySort(th.dataset.sort));
   });
 
-  document.getElementById('btn-prev')?.addEventListener('click', () => {
+  DOM.btnPrev()?.addEventListener('click', () => {
     if (state.table.currentPage > 1) { state.table.currentPage--; renderTable(); }
   });
-  document.getElementById('btn-next')?.addEventListener('click', () => {
+  DOM.btnNext()?.addEventListener('click', () => {
     const total = Math.ceil(state.filteredRows.length / CONFIG.rowsPerPage);
     if (state.table.currentPage < total) { state.table.currentPage++; renderTable(); }
   });
+  DOM.pageNumbers()?.addEventListener('click', event => {
+    const btn = event.target.closest('.page-btn[data-page]');
+    if (!btn) return;
+    state.table.currentPage = Number(btn.dataset.page);
+    renderTable();
+  });
 
-  document.querySelectorAll('.chart-tab').forEach(tab => {
+  DOM.chartTabs().forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      DOM.chartTabs().forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       applyChartRange(tab.dataset.range);
     });
   });
 
-  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+  DOM.modalBackdrops().forEach(backdrop => {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.classList.remove('open'); });
   });
-  document.querySelectorAll('[data-close]').forEach(btn => {
+  DOM.closeButtons().forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
   });
-  document.getElementById('btn-save-thresholds')?.addEventListener('click', saveThresholds);
-  document.querySelector('.nav-logo')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  byId('btn-save-thresholds')?.addEventListener('click', saveThresholds);
+  DOM.navLogo()?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
 function initApp() {
