@@ -101,9 +101,6 @@ const DOM = {
   pageNumbers:   () => document.getElementById('page-numbers'),
   btnPrev:       () => document.getElementById('btn-prev'),
   btnNext:       () => document.getElementById('btn-next'),
-  // Alerts
-  alertList:     () => document.getElementById('alert-list'),
-  alertHistoryList: () => document.getElementById('alert-history-list'),
   // Toast
   toast:         () => document.getElementById('toast'),
   toastMessage:  () => document.getElementById('toast-message'),
@@ -1725,7 +1722,6 @@ function bindEvents() {
     document.getElementById('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
   document.getElementById('btn-thresholds')?.addEventListener('click', () => openModal('modal-thresholds'));
-  document.getElementById('btn-clear-alerts')?.addEventListener('click', acknowledgeAllAlerts);
   document.getElementById('btn-download-csv')?.addEventListener('click', exportCSV);
 
   DOM.tableSearch()?.addEventListener('input', recomputeTableView);
