@@ -21,11 +21,21 @@
     </div>
     <span class="nav-brand">Atmos<span>fera</span></span>
   </div>
+
   <div class="nav-actions">
     <div class="chip">
       <div class="live-indicator"></div>
       <span>Live Feed</span>
     </div>
+
+    <div class="chip" id="last-update-chip">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+      <span id="status-last">-</span>
+    </div>
+
     <button class="chip" id="btn-refresh">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
         <path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -34,6 +44,7 @@
       </svg>
       Refresh
     </button>
+
     <button class="btn-primary" id="btn-export-pdf">Export PDF</button>
     <button class="btn-primary" id="btn-export">Export CSV</button>
   </div>
@@ -79,42 +90,6 @@
     <div class="aqi-mini-stat"><div class="aqi-mini-label">Temperature</div><div class="aqi-mini-value" id="mini-temp">-<span class="aqi-mini-unit">C</span></div></div>
     <div class="aqi-mini-stat"><div class="aqi-mini-label">Humidity</div><div class="aqi-mini-value" id="mini-hum">-<span class="aqi-mini-unit">%</span></div></div>
     <div class="aqi-mini-stat"><div class="aqi-mini-label">Power Draw</div><div class="aqi-mini-value" id="mini-pwr">-<span class="aqi-mini-unit">W</span></div></div>
-  </div>
-</div>
-
-<!-- STATUS STRIP -->
-<div class="status-strip">
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(70,99,112,.1)"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#466370" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-    <div><div class="status-label">Last Update</div><div class="status-value" id="status-last">-</div></div>
-  </div>
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(0,105,119,.1)"><svg viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#006977" stroke-width="1.5" stroke-linecap="round"/><polyline points="22 4 12 14.01 9 11.01" stroke="#006977" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <div><div class="status-label">Feed Status</div><div class="status-value" id="status-feed">-</div></div>
-  </div>
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(70,99,112,.08)"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/><path d="M7 8h10" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/><path d="M9 16h6" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-    <div>
-      <div class="status-label">Feed Health</div>
-      <div class="status-value" id="status-feed-health">-</div>
-      <div class="status-note" id="status-feed-note">Waiting for samples</div>
-    </div>
-  </div>
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(180,83,9,.08)"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v7" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="15" r="6" stroke="#b45309" stroke-width="1.5"/><path d="M9.5 15l1.5 1.5L14.5 13" stroke="#b45309" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <div>
-      <div class="status-label">Sensor Health</div>
-      <div class="status-value" id="status-sensor-health">-</div>
-      <div class="status-note" id="status-sensor-note">Checking sensor patterns</div>
-    </div>
-  </div>
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(93,94,97,.08)"><svg viewBox="0 0 24 24" fill="none"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" stroke="#5d5e61" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17 6 23 6 23 12" stroke="#5d5e61" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <div><div class="status-label">AQ Trend</div><div class="status-value" id="status-trend">-</div></div>
-  </div>
-  <div class="status-card">
-    <div class="status-icon" style="background:rgba(139,58,58,.07)"><svg viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#8b3a3a" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="13" stroke="#8b3a3a" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#8b3a3a" stroke-width="2" stroke-linecap="round"/></svg></div>
-    <div><div class="status-label">Active Alerts</div><div class="status-value" id="status-alerts">None</div></div>
   </div>
 </div>
 
