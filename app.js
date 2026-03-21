@@ -230,7 +230,6 @@ function normalizeRow(raw) {
     pwr:    normalizePower(raw.power),
     energy: +(raw.energy      ?? 0),
     // Use status directly from Google Sheet (normal → Good, warning → Moderate, critical → Attention)
-    status: mapSheetStatus(raw.status),
   };
 }
 
