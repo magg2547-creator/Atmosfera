@@ -123,6 +123,18 @@ nav {
   justify-content: center;
 }
 
+#last-update-chip {
+  min-width: 132px;
+  justify-content: center;
+}
+
+#status-last {
+  display: inline-block;
+  min-width: 78px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── HERO ── */
 .hero {
   padding: var(--sp10) 0 var(--sp8);
