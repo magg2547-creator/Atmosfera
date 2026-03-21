@@ -530,7 +530,6 @@ function renderTable() {
         <td class="td-value">${fmt(r.curr, 2)} A</td>
         <td class="td-value">${fmt(r.pwr, 1)} W</td>
         <td class="td-value">${fmt(r.energy, 2)} kWh</td>
-        <td><span class="badge ${badgeClass}">${badgeIcon} ${r.status}</span></td>
       </tr>`;
     }).join('');
   }
