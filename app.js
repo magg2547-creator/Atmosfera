@@ -1399,7 +1399,6 @@ function bindEvents() {
   document.getElementById('btn-scroll-table')?.addEventListener('click', () => {
     document.getElementById('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
-  document.getElementById('btn-thresholds')?.addEventListener('click', () => openModal('modal-thresholds'));
   document.getElementById('btn-clear-alerts')?.addEventListener('click', () => {
     state.alerts = [];
     renderAlerts();
@@ -1445,7 +1444,6 @@ function bindEvents() {
   document.querySelectorAll('[data-close]').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
   });
-  document.getElementById('btn-save-thresholds')?.addEventListener('click', saveThresholds);
 
   // Logo scroll-to-top
   document.querySelector('.nav-logo')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
