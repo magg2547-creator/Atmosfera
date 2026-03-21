@@ -290,6 +290,7 @@ async function fetchSheet() {
     renderDashboard();
     recomputeTableView();
     updateCharts();
+    requestAnimationFrame(() => resizeAllCharts());
 
     state.fetch.lastFetchAt = new Date();
     setText(DOM.statusFeed(), 'Online');
@@ -1703,7 +1704,7 @@ function initApp() {
   requestAnimationFrame(() => resizeAllCharts());
 }
 
-function resizeAllCharts() {
+ffunction resizeAllCharts() {
   Object.values(charts).forEach(chart => {
     if (!chart) return;
     chart.resize();
