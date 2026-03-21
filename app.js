@@ -1456,68 +1456,6 @@ function renderStatusStrip() {
   renderHealthStatus();
 }
 
-function renderAlerts() {
-  const list = DOM.alertList();
-  const historyList = DOM.alertHistoryList();
-  if (!list) return;
-
-  if (state.alerts.length === 0) {
-    list.innerHTML = '<div class="alert-empty">No active alerts - all readings within normal range</div>';
-  } else {
-    list.innerHTML = state.alerts.map(a => `
-      <div class="alert-item">
-        <div class="alert-icon" style="background:rgba(139,58,58,.08)">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#8b3a3a" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="13" stroke="#8b3a3a" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </div>
-        <div class="alert-body">
-          <div class="alert-title">${a.label} exceeded threshold</div>
-          <div class="alert-desc">Current: ${(+a.value).toFixed(1)} ${a.unit} - Peak: ${(+a.peakValue).toFixed(1)} ${a.unit} - Limit: ${a.threshold} ${a.unit}</div>
-        </div>
-        <div class="alert-meta">
-          <div class="alert-time">${formatTimeShort(a.triggeredAt)}</div>
-          <div class="alert-actions">
-            <span class="alert-badge ${a.acknowledgedAt ? 'acked' : 'active'}">${a.acknowledgedAt ? 'Acknowledged' : 'Active'}</span>
-            <button class="alert-action" data-ack-alert="${a.id}" ${a.acknowledgedAt ? 'disabled' : ''}>${a.acknowledgedAt ? 'Received' : 'Acknowledge'}</button>
-          </div>
-        </div>
-      </div>`).join('');
-  }
-
-  if (historyList) {
-    if (state.alertHistory.length === 0) {
-      historyList.innerHTML = '<div class="alert-empty">No alert history yet</div>';
-    } else {
-      historyList.innerHTML = state.alertHistory.map(entry => {
-        const statusClass = entry.resolvedAt ? 'resolved' : entry.acknowledgedAt ? 'acked' : 'active';
-        const statusLabel = entry.resolvedAt ? 'Resolved' : entry.acknowledgedAt ? 'Acknowledged' : 'Active';
-        const resolvedText = entry.resolvedAt ? `Resolved: ${formatDateTime(entry.resolvedAt)}` : 'Still active';
-        const ackText = entry.acknowledgedAt ? `Ack: ${formatDateTime(entry.acknowledgedAt)}` : 'Not acknowledged';
-        return `
-          <div class="alert-item">
-            <div class="alert-icon" style="background:rgba(70,99,112,.08)">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/><path d="M8 8h8" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/><path d="M8 16h5" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/></svg>
-            </div>
-            <div class="alert-body">
-              <div class="alert-title">${entry.label} threshold event</div>
-              <div class="alert-desc">Started: ${formatDateTime(entry.startedAt)} - Peak: ${(+entry.peakValue).toFixed(1)} ${entry.unit} - Latest: ${(+entry.latestValue).toFixed(1)} ${entry.unit}</div>
-              <div class="alert-desc">${resolvedText} - ${ackText}</div>
-            </div>
-            <div class="alert-meta">
-              <div class="alert-time">${humanizeDuration((entry.resolvedAt || new Date()) - entry.startedAt)}</div>
-              <div class="alert-actions">
-                <span class="alert-badge ${statusClass}">${statusLabel}</span>
-              </div>
-            </div>
-          </div>`;
-      }).join('');
-    }
-  }
-
-  const count = state.alerts.length;
-  setText(DOM.statusAlerts(), count > 0 ? `${count} Active` : 'None');
-  if (DOM.statusAlerts()) DOM.statusAlerts().style.color = count > 0 ? 'var(--error)' : '';
-}
-
 function filterRows(rows) {
   const { filterStatus } = state.table;
   const query = DOM.tableSearch() ? DOM.tableSearch().value.toLowerCase().trim() : '';
