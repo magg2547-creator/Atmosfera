@@ -157,7 +157,6 @@
 <!-- CO2 AND ENERGY -->
 <div class="section-header">
   <div class="section-title">CO2 &amp; Energy Metrics</div>
-  <button class="section-action" id="btn-thresholds">Configure Thresholds</button>
 </div>
 <div class="energy-section">
   <div class="energy-cards">
@@ -336,34 +335,6 @@
   <div class="footer-brand">Atmosfera - Environmental Intelligence</div>
   <div class="footer-note" id="footer-note">IoT Monitoring Station - Data via Google Apps Script</div>
 </footer>
-</div>
-
-<!-- THRESHOLD MODAL -->
-<div class="modal-backdrop" id="modal-thresholds">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Alert Thresholds</div>
-      <button class="modal-close" data-close="modal-thresholds">x</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-row">
-        <div class="modal-field"><label class="modal-label">PM2.5 Max (&micro;g/m&sup3;)</label><input class="modal-input" id="thr-pm25" type="number" value="35"></div>
-        <div class="modal-field"><label class="modal-label">PM10 Max (&micro;g/m&sup3;)</label><input class="modal-input" id="thr-pm10" type="number" value="50"></div>
-      </div>
-      <div class="modal-row">
-        <div class="modal-field"><label class="modal-label">CO2 Max (ppm)</label><input class="modal-input" id="thr-co2" type="number" value="600"></div>
-        <div class="modal-field"><label class="modal-label">Temp Max (C)</label><input class="modal-input" id="thr-temp" type="number" value="35"></div>
-      </div>
-      <div class="modal-row">
-        <div class="modal-field"><label class="modal-label">Humidity Max (%)</label><input class="modal-input" id="thr-hum" type="number" value="85"></div>
-        <div class="modal-field"><label class="modal-label">Power Max (W)</label><input class="modal-input" id="thr-pwr" type="number" value="3000" step="10"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" data-close="modal-thresholds">Cancel</button>
-      <button class="btn-confirm" id="btn-save-thresholds">Apply</button>
-    </div>
-  </div>
 </div>
 
 <!-- TOAST -->
