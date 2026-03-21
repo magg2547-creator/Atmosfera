@@ -475,29 +475,6 @@ function renderStatusStrip() {
   setText(DOM.statusTrend(), trend);
 }
 
-function renderAlerts() {
-  const list = DOM.alertList();
-  if (!list) return;
-  if (state.alerts.length === 0) {
-    list.innerHTML = '<div class="alert-empty">No active alerts — all readings within normal range</div>';
-  } else {
-    list.innerHTML = state.alerts.map(a => `
-      <div class="alert-item">
-        <div class="alert-icon" style="background:rgba(139,58,58,.08)">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#8b3a3a" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="13" stroke="#8b3a3a" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </div>
-        <div class="alert-body">
-          <div class="alert-title">${a.label} exceeded threshold</div>
-          <div class="alert-desc">Current: ${(+a.value).toFixed(1)} ${a.unit} — Limit: ${a.threshold} ${a.unit}</div>
-        </div>
-        <div class="alert-time">${formatTimeShort(a.triggeredAt)}</div>
-      </div>`).join('');
-  }
-  const count = state.alerts.length;
-  setText(DOM.statusAlerts(), count > 0 ? `${count} Active` : 'None');
-  if (DOM.statusAlerts()) DOM.statusAlerts().style.color = count > 0 ? 'var(--error)' : '';
-}
-
 function renderTable() {
   const { currentPage } = state.table;
   const perPage = CONFIG.rowsPerPage;
@@ -1484,8 +1461,6 @@ function renderDashboard() {
   renderAqiBanner();
   renderInsightPanel();
   renderStatusStrip();
-  evaluateAlerts();
-  renderAlerts();
 }
 
 function exportCSV() {
