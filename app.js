@@ -1699,7 +1699,25 @@ function initApp() {
 
   // 5. First data fetch
   fetchSheet();
+
+  requestAnimationFrame(() => resizeAllCharts());
 }
+
+function resizeAllCharts() {
+  Object.values(charts).forEach(chart => {
+    if (!chart) return;
+    chart.resize();
+    chart.update('none');
+  });
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    resizeAllCharts();
+  }, 120);
+});
 
 // Boot
 document.addEventListener('DOMContentLoaded', initApp);
