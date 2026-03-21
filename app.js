@@ -535,7 +535,6 @@ function renderDashboard() {
   renderDeltaBadges();
   renderAqiBanner();
   renderInsightPanel();
-  renderStatusStrip();
 }
 
 // ════════════════════════════════════════════════════════════
