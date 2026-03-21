@@ -488,26 +488,3 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .metric-grid  { grid-template-columns: 1fr; }
   .status-strip { grid-template-columns: 1fr; }
 }
-
-/* ── CHART OVERFLOW FIX ── */
-.chart-section,
-.chart-section > *,
-.chart-card,
-.chart-wrap {
-  min-width: 0;
-}
-
-.chart-wrap {
-  width: 100%;
-  overflow: hidden;
-}
-
-.chart-wrap canvas {
-  display: block;
-  width: 100% !important;
-  max-width: 100%;
-}
-
-.chart-card {
-  overflow: hidden;
-}
