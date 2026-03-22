@@ -6,7 +6,7 @@
 <title>Atmosfera - Air &amp; Energy Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -243,13 +243,31 @@
     <div class="table-controls">
       <div class="range-toolbar">
         <div class="range-chip-group">
-          <button class="range-chip active" data-range-preset="all">All</button>
-          <button class="range-chip" data-range-preset="today">Today</button>
-          <button class="range-chip" data-range-preset="7d">7 Days</button>
-          <button class="range-chip" data-range-preset="30d">30 Days</button>
+          <button class="range-chip active" type="button" data-range-preset="all">All</button>
+          <button class="range-chip" type="button" data-range-preset="today">Today</button>
+          <button class="range-chip" type="button" data-range-preset="7d">7 Days</button>
+          <button class="range-chip" type="button" data-range-preset="30d">30 Days</button>
         </div>
       </div>
       <input class="table-search" type="text" id="table-search" placeholder="Search records...">
+      <div class="mobile-table-toolbar">
+        <label class="mobile-sort-label" for="table-sort-select">Sort records</label>
+        <div class="mobile-sort-controls">
+          <select class="mobile-sort-select" id="table-sort-select">
+            <option value="time">Recorded</option>
+            <option value="pm25">PM2.5</option>
+            <option value="pm10">PM10</option>
+            <option value="temp">Temperature</option>
+            <option value="hum">Humidity</option>
+            <option value="co2">CO2</option>
+            <option value="volt">Voltage</option>
+            <option value="curr">Current</option>
+            <option value="pwr">Power</option>
+            <option value="energy">Energy</option>
+          </select>
+          <button class="mobile-sort-direction" id="table-sort-direction" type="button">Newest first</button>
+        </div>
+      </div>
     </div>
     <div class="range-summary" id="range-summary">Date range: All records</div>
     <div class="table-scroll">
