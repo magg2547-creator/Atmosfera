@@ -975,7 +975,19 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .toast         { right: var(--sp4); bottom: var(--sp4); }
 }
 @media (max-width: 560px) {
-  #last-update-chip,
+  #last-update-chip {
+    flex: 1 1 calc(50% - var(--sp2));
+    min-width: 0;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #status-last {
+    width: auto;
+    max-width: calc(100% - 21px); /* หักความกว้าง icon 13px + gap 8px */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   #btn-refresh,
   #btn-export-pdf,
   #btn-export {
