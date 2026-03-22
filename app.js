@@ -1135,24 +1135,17 @@ function getExportRowValues(row) {
   ];
 }
 
-function exportCSV() {
-  const rows = getExportRows();
+function exportAllCSV() {
+  const rows = [...state.rows].sort((a, b) => b.time - a.time);
   if (rows.length === 0) {
-    showToast('No data to export for the selected range');
+    showToast('No data to export');
     return;
   }
 
   const headers = [
-    'Time',
-    'PM2.5 (\u00b5g/m\u00b3)',
-    'PM10 (\u00b5g/m\u00b3)',
-    'Temperature (C)',
-    'Humidity (%)',
-    'CO2 (ppm)',
-    'Voltage (V)',
-    'Current (A)',
-    'Power (W)',
-    'Energy (kWh)',
+    'Time', 'PM2.5 (\u00b5g/m\u00b3)', 'PM10 (\u00b5g/m\u00b3)',
+    'Temperature (C)', 'Humidity (%)', 'CO2 (ppm)',
+    'Voltage (V)', 'Current (A)', 'Power (W)', 'Energy (kWh)',
   ];
 
   const csvRows = [
@@ -1160,10 +1153,12 @@ function exportCSV() {
     ...rows.map(row => getExportRowValues(row).map(toCsvCell).join(',')),
   ];
 
-  const blobUrl = URL.createObjectURL(new Blob([csvRows.join('\n')], { type: 'text/csv' }));
+  const blobUrl = URL.createObjectURL(
+    new Blob([csvRows.join('\n')], { type: 'text/csv' })
+  );
   const link = document.createElement('a');
   link.href = blobUrl;
-  link.download = `atmosfera_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `atmosfera_all_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1319,8 +1314,8 @@ function manualRefresh() {
 function bindEvents() {
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
   byId('btn-export-pdf')?.addEventListener('click', exportPDF);
-  byId('btn-export')?.addEventListener('click', exportCSV);
-
+  byId('btn-export')?.addEventListener('click', exportAllCSV);
+  
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
