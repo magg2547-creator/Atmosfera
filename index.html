@@ -49,6 +49,14 @@
     <button class="btn-primary" id="btn-export">Export CSV</button>
   </div>
 </nav>
+  <div class="error-banner" id="error-banner" hidden>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+    <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </svg>
+  <span id="error-banner-text">Unable to load data</span>
+  <button class="error-retry" id="btn-error-retry">Try again</button>
+</div>
 
 <!-- HERO -->
 <section class="hero">
