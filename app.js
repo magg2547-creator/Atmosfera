@@ -267,11 +267,13 @@ function toCsvCell(value) {
 
 function calcAqiFromPm25(pm25) {
   const breakpoints = [
-    [0, 12, 0, 50],
-    [12.1, 35.4, 51, 100],
-    [35.5, 55.4, 101, 150],
+    [0,    12,    0,   50],
+    [12.1, 35.4,  51,  100],
+    [35.5, 55.4,  101, 150],
     [55.5, 150.4, 151, 200],
     [150.5, 250.4, 201, 300],
+    [250.5, 350.4, 301, 400],  // เพิ่ม
+    [350.5, 500.4, 401, 500],  // เพิ่ม
   ];
 
   for (const [low, high, aqiLow, aqiHigh] of breakpoints) {
@@ -280,7 +282,7 @@ function calcAqiFromPm25(pm25) {
     }
   }
 
-  return Math.round(pm25 * 1.5);
+  return 500; // PM2.5 > 500.4 → Hazardous ceiling
 }
 
 function calcAqiFromPm10(pm10) {
@@ -308,10 +310,12 @@ function calcAQI() {
 }
 
 function getAqiMeta(aqi) {
-  if (aqi <= 50) return { label: 'Good - Acceptable', dot: '#a8e6c8' };
-  if (aqi <= 100) return { label: 'Moderate', dot: '#fde68a' };
+  if (aqi <= 50)  return { label: 'Good',                          dot: '#a8e6c8' };
+  if (aqi <= 100) return { label: 'Moderate',                      dot: '#fde68a' };
   if (aqi <= 150) return { label: 'Unhealthy for Sensitive Groups', dot: '#fca5a5' };
-  return { label: 'Unhealthy', dot: '#f87171' };
+  if (aqi <= 200) return { label: 'Unhealthy',                     dot: '#f87171' };
+  if (aqi <= 300) return { label: 'Very Unhealthy',                dot: '#c084fc' }; // เพิ่ม
+  return          { label: 'Hazardous',                            dot: '#9f1239' }; // เพิ่ม
 }
 
 function normalizeRow(raw) {
