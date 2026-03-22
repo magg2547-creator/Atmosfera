@@ -641,7 +641,7 @@ table { width: 100%; }
 .records-table .col-energy   { width: 108px; }
 .records-table thead th {
   font-size: .66rem; font-weight: 600; letter-spacing: .04em;
-  color: var(--on-surface-variant); text-align: left;
+  color: var(--on-surface-variant); text-align: center;  /* เปลี่ยนจาก left */
   padding: 0 var(--sp3) var(--sp2); cursor: pointer; user-select: none; white-space: nowrap;
   text-transform: none;
 }
