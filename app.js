@@ -1329,11 +1329,11 @@ function bindEvents() {
     exportPDF(rows);
   });
 
-  byId('pdf-date-from')?.addEventListener('change', updatePdfModalSummary{
-  syncPdfPresetButtons(null); // ล้าง active เมื่อเลือกวันเอง
+  byId('pdf-date-from')?.addEventListener('change', () => {
+  syncPdfPresetButtons(null);
   updatePdfModalSummary();
 });
-  byId('pdf-date-to')?.addEventListener('change', updatePdfModalSummary{
+  byId('pdf-date-to')?.addEventListener('change', () => {
   syncPdfPresetButtons(null);
   updatePdfModalSummary();
 });
