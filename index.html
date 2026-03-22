@@ -323,6 +323,43 @@
 </footer>
 </div>
 
+<!-- PDF EXPORT MODAL -->
+<div class="modal-overlay" id="modal-pdf" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Export PDF</div>
+      <button class="modal-close" id="btn-modal-close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-row">
+        <div class="modal-field">
+          <label class="modal-label" for="pdf-date-from">From</label>
+          <input class="modal-input" type="date" id="pdf-date-from">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="pdf-date-to">To</label>
+          <input class="modal-input" type="date" id="pdf-date-to">
+        </div>
+      </div>
+      <div class="modal-presets">
+        <button class="range-chip" data-pdf-preset="today">Today</button>
+        <button class="range-chip" data-pdf-preset="7d">Last 7 days</button>
+        <button class="range-chip" data-pdf-preset="30d">Last 30 days</button>
+        <button class="range-chip" data-pdf-preset="all">All records</button>
+      </div>
+      <div class="modal-summary" id="pdf-modal-summary">-</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-modal-cancel">Cancel</button>
+      <button class="btn-confirm" id="btn-modal-confirm">Export PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">
   <div class="toast-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
