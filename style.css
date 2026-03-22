@@ -174,18 +174,21 @@ nav {
 }
 
 #last-update-chip {
-  width: 148px;        /* fixed แทน min-width */
-  flex: 0 0 148px;     /* ไม่ grow ไม่ shrink */
+  width: 158px;
+  flex: 0 0 158px;
   justify-content: center;
+  overflow: hidden;     /* กันเนื้อหาล้น */
 }
 
 #status-last {
   display: inline-block;
-  width: 100px;        /* fixed แทน min-width */
+  width: 108px;         /* icon 13px + gap 8px + span 108px ≈ 129px + padding */
   text-align: center;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
 /* ── HERO ── */
 .hero {
   padding: var(--sp10) 0 var(--sp8);
