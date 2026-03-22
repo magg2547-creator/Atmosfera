@@ -145,11 +145,11 @@ const DONUT_LABEL_PLUGIN = {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255,255,255,.9)';
-    ctx.font = '700 18px Sora, sans-serif';
-    ctx.fillText(Math.round(state.current.co2), width / 2, height / 2 - 8);
+    ctx.font = '700 22px Sora, sans-serif';       // ขึ้นจาก 18px
+    ctx.fillText(Math.round(state.current.co2), width / 2, height / 2 - 10);
     ctx.fillStyle = 'rgba(255,255,255,.45)';
-    ctx.font = '400 10px Instrument Sans, sans-serif';
-    ctx.fillText('ppm', width / 2, height / 2 + 10);
+    ctx.font = '400 11px Instrument Sans, sans-serif'; // ขึ้นจาก 10px
+    ctx.fillText('ppm', width / 2, height / 2 + 12);
     ctx.restore();
   },
 };
@@ -994,7 +994,7 @@ function initCharts() {
     },
     options: {
       responsive: false,
-      cutout: '74%',
+      cutout: '68',
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
