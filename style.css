@@ -445,7 +445,7 @@ nav {
 .donut-wrap { display: flex; align-items: center; justify-content: center; min-width: 0; width: 100%; }
 #chart-donut {
   display: block;
-  width: min(100%, 160px) !important;
+  width: min(100%, 220px) !important;
   height: auto !important;
   aspect-ratio: 1;
   margin: 0 auto;
