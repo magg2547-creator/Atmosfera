@@ -91,6 +91,9 @@ const DOM = {
   skeletons: () => ['sk-pm25', 'sk-pm10', 'sk-temp', 'sk-hum', 'sk-volt', 'sk-curr', 'sk-insight']
     .map(id => byId(id))
     .filter(Boolean),
+  errorBanner:     () => byId('error-banner'),
+  errorBannerText: () => byId('error-banner-text'),
+  btnErrorRetry:   () => byId('btn-error-retry'),
 };
 
 const TABLE_SORT_LABELS = Object.freeze({
@@ -367,20 +370,37 @@ async function fetchSheetData() {
 }
 
 function handleFetchError(error) {
+  const isFirstLoad = state.rows.length === 0;
+  const message = isFirstLoad
+    ? `Could not load data — ${error.message}`
+    : `Refresh failed — showing last known data (${error.message})`;
+
+  showErrorBanner(message);
   setText(DOM.lastUpdate(), 'Failed');
   showToast(`Warning: ${error.message}`);
   console.error('[Atmosfera] fetch error:', error);
   startCountdown();
 }
 
+function showErrorBanner(message) {
+  const banner = DOM.errorBanner();
+  const text   = DOM.errorBannerText();
+  if (text)   text.textContent = message;
+  if (banner) banner.hidden = false;
+}
+
+function hideErrorBanner() {
+  const banner = DOM.errorBanner();
+  if (banner) banner.hidden = true;
+}
+
 async function fetchSheet() {
   if (state.fetch.isFetching) return;
-
   state.fetch.isFetching = true;
   setText(DOM.lastUpdate(), 'Loading...');
 
   try {
-    const rawRows = await fetchSheetData();
+    const rawRows        = await fetchSheetData();
     const normalizedRows = normalizeRows(rawRows);
 
     state.rows = normalizedRows;
@@ -389,11 +409,11 @@ async function fetchSheet() {
     renderDashboard();
     recomputeTableView();
     updateCharts();
+    hideErrorBanner(); // ← เพิ่ม
 
     setText(DOM.lastUpdate(), 'Just now');
     showToast(`Loaded ${rawRows.length} records`);
     startCountdown();
-
     requestAnimationFrame(() => resizeAllCharts());
   } catch (error) {
     handleFetchError(error);
@@ -1347,6 +1367,8 @@ function bindEvents() {
   DOM.chartTabs().forEach(tab => {
     tab.addEventListener('click', () => applyChartRange(tab.dataset.range));
   });
+
+  DOM.btnErrorRetry()?.addEventListener('click', manualRefresh);
 }
 
 function resizeAllCharts() {
