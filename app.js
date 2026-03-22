@@ -1329,8 +1329,14 @@ function bindEvents() {
     exportPDF(rows);
   });
 
-  byId('pdf-date-from')?.addEventListener('change', updatePdfModalSummary);
-  byId('pdf-date-to')?.addEventListener('change', updatePdfModalSummary);
+  byId('pdf-date-from')?.addEventListener('change', updatePdfModalSummary{
+  syncPdfPresetButtons(null); // ล้าง active เมื่อเลือกวันเอง
+  updatePdfModalSummary();
+});
+  byId('pdf-date-to')?.addEventListener('change', updatePdfModalSummary{
+  syncPdfPresetButtons(null);
+  updatePdfModalSummary();
+});
 
   document.querySelectorAll('[data-pdf-preset]').forEach(btn => {
     btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
@@ -1422,15 +1428,20 @@ function openPdfModal() {
   if (fromInput) fromInput.value = sevenDaysAgo;
   if (toInput)   toInput.value   = today;
 
+  syncPdfPresetButtons('7d'); // highlight default preset
   updatePdfModalSummary();
 
   const modal = byId('modal-pdf');
   if (modal) modal.hidden = false;
+
+  document.body.style.overflow = 'hidden'; // ล็อก scroll
 }
 
 function closePdfModal() {
   const modal = byId('modal-pdf');
   if (modal) modal.hidden = true;
+
+  document.body.style.overflow = ''; // คืน scroll
 }
 
 function getPdfModalRows() {
@@ -1467,6 +1478,12 @@ function updatePdfModalSummary() {
   summary.textContent = `${fromVal} → ${toVal} — ${rows.length} entries`;
 }
 
+function syncPdfPresetButtons(activePreset) {
+  document.querySelectorAll('[data-pdf-preset]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pdfPreset === activePreset);
+  });
+}
+
 function applyPdfPreset(preset) {
   const today = new Date();
   const from  = new Date(today);
@@ -1488,6 +1505,7 @@ function applyPdfPreset(preset) {
     byId('pdf-date-to').value   = '';
   }
 
+  syncPdfPresetButtons(preset); // highlight ที่เลือก
   updatePdfModalSummary();
 }
 
