@@ -992,3 +992,34 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .records-table tbody tr { grid-template-columns: 1fr; }
   .chart-wrap   { height: 180px; }
 }
+
+/* ── ERROR BANNER ── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  padding: var(--sp3) var(--sp6);
+  margin-bottom: var(--sp6);
+  background: linear-gradient(135deg, rgba(154,91,88,.12), rgba(154,91,88,.06));
+  border: 1px solid rgba(154,91,88,.28);
+  border-radius: var(--r-lg);
+  color: var(--error);
+  font-size: .85rem;
+}
+.error-banner[hidden] { display: none; }
+.error-banner svg     { flex-shrink: 0; }
+.error-banner span    { flex: 1; }
+.error-retry {
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--error);
+  background: rgba(154,91,88,.10);
+  border: 1px solid rgba(154,91,88,.24);
+  border-radius: var(--r-full);
+  padding: var(--sp1) var(--sp4);
+  cursor: pointer;
+  transition: background .2s;
+  white-space: nowrap;
+}
+.error-retry:hover { background: rgba(154,91,88,.18); }
