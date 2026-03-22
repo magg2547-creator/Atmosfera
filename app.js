@@ -1,7 +1,7 @@
 'use strict';
 
 const CONFIG = {
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbw8cXJF40QNeW-0-IfgTpzZBMl8ydSL9GcyG-8Y0EWo7Aa5wnNzJMwImWIFbGGF9Cu8uw/exec?token=zd;lkfgmhopgmhpzoifgjhz',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbw8cXJF40QNeW-0-IfgTpzZBMl8ydSL9GcyG-8Y0EWo7Aa5wnNzJMwImWIFbGGF9Cu8uw/exec?token=zdlkfgmhopgmhpzoifgjhz',
   fetchInterval: 60 * 60 * 1000,
   maxRows: 200,
   rowsPerPage: 10,
