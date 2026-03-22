@@ -1167,8 +1167,8 @@ function exportAllCSV() {
   showToast(`Exported ${rows.length} records`);
 }
 
-function exportPDF() {
-  const rows = getExportRows();
+function exportPDF(rows) {
+  if (!Array.isArray(rows)) rows = getExportRows();
   if (rows.length === 0) {
     showToast('No data to export for the selected range');
     return;
@@ -1313,8 +1313,28 @@ function manualRefresh() {
 
 function bindEvents() {
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
-  byId('btn-export-pdf')?.addEventListener('click', exportPDF);
+  byId('btn-export-pdf')?.addEventListener('click', openPdfModal);
   byId('btn-export')?.addEventListener('click', exportAllCSV);
+  
+  // modal
+  byId('btn-modal-close')?.addEventListener('click', closePdfModal);
+  byId('btn-modal-cancel')?.addEventListener('click', closePdfModal);
+  byId('modal-pdf')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePdfModal(); // คลิก overlay ปิด
+  });
+
+  byId('btn-modal-confirm')?.addEventListener('click', () => {
+    const rows = getPdfModalRows();
+    closePdfModal();
+    exportPDF(rows);
+  });
+
+  byId('pdf-date-from')?.addEventListener('change', updatePdfModalSummary);
+  byId('pdf-date-to')?.addEventListener('change', updatePdfModalSummary);
+
+  document.querySelectorAll('[data-pdf-preset]').forEach(btn => {
+    btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
+  });
   
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
@@ -1389,6 +1409,86 @@ function initApp() {
 
   fetchSheet();
   requestAnimationFrame(() => resizeAllCharts());
+}
+
+// ── PDF MODAL ──────────────────────────────────────────────
+
+function openPdfModal() {
+  const today = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+
+  const fromInput = byId('pdf-date-from');
+  const toInput   = byId('pdf-date-to');
+  if (fromInput) fromInput.value = sevenDaysAgo;
+  if (toInput)   toInput.value   = today;
+
+  updatePdfModalSummary();
+
+  const modal = byId('modal-pdf');
+  if (modal) modal.hidden = false;
+}
+
+function closePdfModal() {
+  const modal = byId('modal-pdf');
+  if (modal) modal.hidden = true;
+}
+
+function getPdfModalRows() {
+  const fromVal = byId('pdf-date-from')?.value;
+  const toVal   = byId('pdf-date-to')?.value;
+
+  if (!fromVal || !toVal) return state.rows;
+
+  const from = new Date(fromVal);
+  const to   = new Date(toVal);
+  to.setHours(23, 59, 59, 999);
+
+  return state.rows.filter(row => row.time >= from && row.time <= to);
+}
+
+function updatePdfModalSummary() {
+  const rows    = getPdfModalRows();
+  const summary = byId('pdf-modal-summary');
+  if (!summary) return;
+
+  const fromVal = byId('pdf-date-from')?.value;
+  const toVal   = byId('pdf-date-to')?.value;
+
+  if (!fromVal || !toVal) {
+    summary.textContent = `All records — ${rows.length} entries`;
+    return;
+  }
+
+  if (rows.length === 0) {
+    summary.textContent = 'No records found in this date range';
+    return;
+  }
+
+  summary.textContent = `${fromVal} → ${toVal} — ${rows.length} entries`;
+}
+
+function applyPdfPreset(preset) {
+  const today = new Date();
+  const from  = new Date(today);
+  const to    = today.toISOString().slice(0, 10);
+
+  if (preset === 'today') {
+    byId('pdf-date-from').value = to;
+    byId('pdf-date-to').value   = to;
+  } else if (preset === '7d') {
+    from.setDate(from.getDate() - 6);
+    byId('pdf-date-from').value = from.toISOString().slice(0, 10);
+    byId('pdf-date-to').value   = to;
+  } else if (preset === '30d') {
+    from.setDate(from.getDate() - 29);
+    byId('pdf-date-from').value = from.toISOString().slice(0, 10);
+    byId('pdf-date-to').value   = to;
+  } else {
+    byId('pdf-date-from').value = '';
+    byId('pdf-date-to').value   = '';
+  }
+
+  updatePdfModalSummary();
 }
 
 let resizeTimer = null;
