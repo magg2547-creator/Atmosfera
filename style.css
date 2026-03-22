@@ -228,7 +228,8 @@ nav {
 .hero-meta {
   text-align: right;
   padding: clamp(var(--sp4), 3vw, var(--sp6));
-  min-width: min(100%, 16rem);
+  width: min(100%, 16rem);      /* เปลี่ยนจาก min-width → width */
+  flex-shrink: 0;               /* ไม่ให้หดใน grid */
   background: linear-gradient(145deg, rgba(255,255,255,.38), rgba(233,243,245,.18));
   border: 1px solid var(--glass-border);
   border-radius: calc(var(--r-xl) - .6rem);
@@ -244,6 +245,7 @@ nav {
 .hero-clock {
   font-family: var(--font-display); font-size: 2.4rem; font-weight: 500;
   color: var(--on-surface); letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;  /* เพิ่ม — ทำให้ตัวเลขกว้างเท่ากันทุกตัว */
 }
 
 /* ── AQI BANNER ── */
