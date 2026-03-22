@@ -1320,7 +1320,6 @@ function bindEvents() {
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
   byId('btn-export-pdf')?.addEventListener('click', exportPDF);
   byId('btn-export')?.addEventListener('click', exportCSV);
-  byId('btn-download-csv')?.addEventListener('click', exportCSV);
 
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
