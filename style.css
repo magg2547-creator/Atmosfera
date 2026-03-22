@@ -174,14 +174,14 @@ nav {
 }
 
 #last-update-chip {
-  min-width: 132px;
+  width: 148px;        /* fixed แทน min-width */
+  flex: 0 0 148px;     /* ไม่ grow ไม่ shrink */
   justify-content: center;
-  flex: 0 1 auto;
 }
 
 #status-last {
   display: inline-block;
-  min-width: 78px;
+  width: 100px;        /* fixed แทน min-width */
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
