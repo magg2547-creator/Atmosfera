@@ -1115,3 +1115,21 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   color: #9aa4b2;
   font-style: italic;
 }
+
+.empty-state {
+  margin: 16px 0 20px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  text-align: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.empty-state h3 {
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #9aa4b2;
+}
