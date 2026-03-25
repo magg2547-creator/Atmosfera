@@ -407,11 +407,6 @@ function hideErrorBanner() {
   if (banner) banner.hidden = true;
 }
 
-function showEmptyState() {
-  const empty = DOM.emptyState();
-  if (empty) empty.hidden = false;
-}
-
 function hideEmptyState() {
   const empty = DOM.emptyState();
   if (empty) empty.hidden = true;
@@ -444,11 +439,6 @@ function clearCharts() {
 function showEmptyState() {
   const empty = DOM.emptyState();
   if (empty) empty.hidden = false;
-}
-
-function hideEmptyState() {
-  const empty = DOM.emptyState();
-  if (empty) empty.hidden = true;
 }
 
 function renderEmptyState() {
@@ -1667,71 +1657,6 @@ function applyPdfPreset(preset) {
 
   syncPdfPresetButtons(preset); // highlight ที่เลือก
   updatePdfModalSummary();
-}
-
-function renderEmptyState() {
-  state.fetch.uiState = 'empty';
-  state.rows = [];
-  state.filteredRows = [];
-  state.table.currentPage = 1;
-
-  hideErrorBanner();
-  showEmptyState();
-
-  setText(DOM.lastUpdate(), 'No records yet');
-
-  setText(DOM.aqiScore(), '—');
-  setText(DOM.aqiStatusText(), 'No sensor data yet');
-
-  const aqiDot = DOM.aqiDot();
-  if (aqiDot) {
-    aqiDot.style.background = 'rgba(90,106,114,.28)';
-    aqiDot.style.boxShadow = 'none';
-  }
-
-  setText(DOM.bannerPm25(), '—');
-  setText(DOM.bannerPm10(), '—');
-  setText(DOM.bannerCo2(), '—');
-
-  setWidth(DOM.gaugePm25(), 0);
-  setWidth(DOM.gaugePm10(), 0);
-  setWidth(DOM.gaugeCo2(), 0);
-
-  setText(DOM.miniTemp(), '—');
-  setText(DOM.miniHum(), '—');
-  setText(DOM.miniPwr(), '—');
-
-  setHTML(DOM.valPm25(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valPm10(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valTemp(), `—<span class="metric-unit">C</span>`);
-  setHTML(DOM.valHum(), `—<span class="metric-unit">%</span>`);
-  setHTML(DOM.valCo2(), `—<span class="metric-unit">ppm</span>`);
-  setHTML(DOM.valVolt(), `—<span class="metric-unit">V</span>`);
-  setHTML(DOM.valCurr(), `—<span class="metric-unit">A</span>`);
-
-  resetDeltaBadge(DOM.deltaPm25());
-  resetDeltaBadge(DOM.deltaPm10());
-  resetDeltaBadge(DOM.deltaTemp());
-  resetDeltaBadge(DOM.deltaHum());
-  resetDeltaBadge(DOM.deltaCo2());
-  resetDeltaBadge(DOM.deltaVolt());
-  resetDeltaBadge(DOM.deltaCurr());
-
-  setText(DOM.insightPwr(), '—');
-  setText(DOM.insightEnergy(), '—');
-  setText(DOM.insightPf(), '—');
-  setText(DOM.insightEff(), '—');
-
-  setWidth(DOM.barPwr(), 0);
-  setWidth(DOM.barEnergy(), 0);
-  setWidth(DOM.barPf(), 0);
-
-  if (DOM.rangeSummary()) {
-    setText(DOM.rangeSummary(), 'Date range: No records yet');
-  }
-
-  renderTable();
-  clearCharts();
 }
 
 let resizeTimer = null;
