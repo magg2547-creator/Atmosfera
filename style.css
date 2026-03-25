@@ -773,6 +773,46 @@ thead th.sorted[data-sort-dir='desc'] .sort-icon::after {
 .page-btn:hover, .page-btn.active { background: linear-gradient(135deg, rgba(84,113,122,.96), rgba(64,115,120,.84)); color: var(--on-primary); border-color: rgba(255,255,255,.22); }
 .page-btn:disabled { opacity: .35; cursor: default; background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(236,244,247,.12)); color: var(--on-surface-variant); }
 .no-results { text-align: center; padding: var(--sp10); color: var(--on-surface-variant); font-size: .85rem; }
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(70,99,112,.08);
+  border: 1px solid rgba(90,106,114,.14);
+  color: var(--on-surface);
+}
+
+.empty-state[hidden] {
+  display: none !important;
+}
+
+.empty-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(70,99,112,.10);
+  color: #466370;
+  flex: 0 0 auto;
+}
+
+.empty-state-copy h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.empty-state-copy p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: .92rem;
+  line-height: 1.5;
+}
 
 /* ── MODAL ── */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(64,88,96,.20); backdrop-filter: blur(14px) saturate(150%); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
