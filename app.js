@@ -93,6 +93,7 @@ const DOM = {
     .filter(Boolean),
   errorBanner:     () => byId('error-banner'),
   errorBannerText: () => byId('error-banner-text'),
+  emptyState: () => byId('empty-state'),
   btnErrorRetry:   () => byId('btn-error-retry'),
 };
 
@@ -357,27 +358,40 @@ function copyCurrentMetricsFromRow(row) {
 }
 
 async function fetchSheetData() {
-  const res = await fetch(CONFIG.sheetUrl);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const response = await fetch(CONFIG.sheetUrl);
 
-  const json = await res.json();
-  if (json.status !== 'ok') {
-    throw new Error(json.message || 'API returned error');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const payload = await response.json();
+
+  if (payload.status !== 'ok') {
+    throw new Error(payload.message || 'API returned an error');
   }
 
-  return Array.isArray(json.data) ? json.data : [];
+  if (!Array.isArray(payload.data)) {
+    throw new Error('Invalid data format');
+  }
+
+  return payload.data;
 }
 
 function handleFetchError(error) {
+  hideEmptyState();
+
   const isFirstLoad = state.rows.length === 0;
+
   const message = isFirstLoad
     ? `Could not load data — ${error.message}`
     : `Refresh failed — showing last known data (${error.message})`;
 
+  state.fetch.uiState = 'error';
+
   showErrorBanner(message);
   setText(DOM.lastUpdate(), 'Failed');
   showToast(`Warning: ${error.message}`);
+
   console.error('[Atmosfera] fetch error:', error);
+
   startCountdown();
 }
 
@@ -393,49 +407,145 @@ function hideErrorBanner() {
   if (banner) banner.hidden = true;
 }
 
+function showEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = false;
+}
+
+function hideEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = true;
+}
+
+function resetDeltaBadge(element) {
+  if (!element) return;
+  element.className = 'delta';
+  element.style.background = 'rgba(255,255,255,.12)';
+  element.style.color = 'rgba(255,255,255,.7)';
+  element.textContent = '—';
+}
+
+function clearCharts() {
+  Object.values(charts).forEach(chart => {
+    if (!chart) return;
+
+    chart.data.labels = [];
+
+    if (Array.isArray(chart.data.datasets)) {
+      chart.data.datasets.forEach(dataset => {
+        dataset.data = [];
+      });
+    }
+
+    chart.update('none');
+  });
+}
+
+function renderEmptyState() {
+  state.fetch.uiState = 'empty';
+  state.rows = [];
+  state.filteredRows = [];
+  state.table.currentPage = 1;
+
+  hideErrorBanner();
+  showEmptyState();
+
+  setText(DOM.lastUpdate(), 'No records yet');
+
+  setText(DOM.aqiScore(), '—');
+  setText(DOM.aqiStatusText(), 'No sensor data yet');
+
+  const aqiDot = DOM.aqiDot();
+  if (aqiDot) {
+    aqiDot.style.background = 'rgba(90,106,114,.28)';
+    aqiDot.style.boxShadow = 'none';
+  }
+
+  setText(DOM.bannerPm25(), '—');
+  setText(DOM.bannerPm10(), '—');
+  setText(DOM.bannerCo2(), '—');
+
+  setWidth(DOM.gaugePm25(), 0);
+  setWidth(DOM.gaugePm10(), 0);
+  setWidth(DOM.gaugeCo2(), 0);
+
+  setText(DOM.miniTemp(), '—');
+  setText(DOM.miniHum(), '—');
+  setText(DOM.miniPwr(), '—');
+
+  setHTML(DOM.valPm25(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valPm10(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valTemp(), `—<span class="metric-unit">C</span>`);
+  setHTML(DOM.valHum(), `—<span class="metric-unit">%</span>`);
+  setHTML(DOM.valCo2(), `—<span class="metric-unit">ppm</span>`);
+  setHTML(DOM.valVolt(), `—<span class="metric-unit">V</span>`);
+  setHTML(DOM.valCurr(), `—<span class="metric-unit">A</span>`);
+
+  resetDeltaBadge(DOM.deltaPm25());
+  resetDeltaBadge(DOM.deltaPm10());
+  resetDeltaBadge(DOM.deltaTemp());
+  resetDeltaBadge(DOM.deltaHum());
+  resetDeltaBadge(DOM.deltaCo2());
+  resetDeltaBadge(DOM.deltaVolt());
+  resetDeltaBadge(DOM.deltaCurr());
+
+  setText(DOM.insightPwr(), '—');
+  setText(DOM.insightEnergy(), '—');
+  setText(DOM.insightPf(), '—');
+  setText(DOM.insightEff(), '—');
+
+  setWidth(DOM.barPwr(), 0);
+  setWidth(DOM.barEnergy(), 0);
+  setWidth(DOM.barPf(), 0);
+
+  setText(DOM.rangeSummary(), 'Date range: No records yet');
+
+  renderTable();
+  clearCharts();
+}
+
 async function fetchSheet() {
   if (state.fetch.isFetching) return;
 
   state.fetch.isFetching = true;
-  setText(DOM.statusFeed(), 'Fetching…');
+  setText(DOM.lastUpdate(), 'Loading...');
 
   try {
-    const rawData = await fetchSheetData();
+    const rawRows = await fetchSheetData();
 
-    // กรณี 1: โหลดสำเร็จ แต่ยังไม่มีข้อมูล
-    if (rawData.length === 0) {
-      state.fetch.uiState = 'empty';
+    if (rawRows.length === 0) {
       renderEmptyState();
       startCountdown();
       return;
     }
 
-    // กรณี 2: โหลดสำเร็จ และมีข้อมูล
-    const latest = extractLatestRow(rawData);
-    applyLatestToState(latest);
-    syncRowsState(rawData);
+    const normalizedRows = normalizeRows(rawRows);
+
+    state.fetch.uiState = 'ready';
+    state.rows = normalizedRows;
+
+    copyCurrentMetricsFromRow(normalizedRows[0]);
 
     renderDashboard();
     recomputeTableView();
     updateCharts();
 
-    state.fetch.uiState = 'ready';
-    state.fetch.lastFetchAt = new Date();
+    hideEmptyState();
+    hideErrorBanner();
 
-    setText(DOM.statusFeed(), 'Online');
-    setText(DOM.statusLast(), 'Just now');
+    setText(DOM.lastUpdate(), 'Just now');
+    showToast(`Loaded ${rawRows.length} records`);
 
-    showToast(`Loaded ${rawData.length} records`);
     startCountdown();
-  } catch (err) {
-    // กรณี 3: โหลดพังจริง
-    state.fetch.uiState = 'error';
-    handleFetchError(err);
+    requestAnimationFrame(() => resizeAllCharts());
+  } catch (error) {
+    handleFetchError(error);
   } finally {
     state.fetch.isFetching = false;
     hideSkeleton();
   }
 }
+
 function renderMetricCards() {
   const current = state.current;
   setHTML(DOM.valPm25(), `${fmt(current.pm25)}<span class="metric-unit">&micro;g/m&sup3;</span>`);
@@ -665,16 +775,24 @@ function syncSortIndicators() {
 }
 
 function recomputeTableView() {
-  if (!state.rows.length) {
+  state.table.currentPage = 1;
+
+  if (state.rows.length === 0) {
     state.filteredRows = [];
+    syncRangeControls();
+    syncSortIndicators();
+    setText(DOM.rangeSummary(), 'Date range: No records yet');
     renderTable();
     return;
   }
-  state.table.currentPage = 1;
+
   state.filteredRows = getFilteredAndSortedRows(state.rows);
+
   syncRangeControls();
   syncSortIndicators();
+
   setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
+
   renderTable();
 }
 
@@ -716,23 +834,11 @@ function applyRangePreset(preset) {
 }
 
 function renderTable() {
-  const rows = state.filteredRows || [];
-  if (!rows.length) {
-    DOM.tableBody().innerHTML = `
-      <tr>
-        <td colspan="10" class="table-empty">
-          ยังไม่มีข้อมูลจากอุปกรณ์
-        </td>
-      </tr>
-    `;
-    setText(DOM.pageInfo(), '0 / 0');
-    if (DOM.pageNumbers()) DOM.pageNumbers().innerHTML = '';
-    return;
-  }
   const { currentPage } = state.table;
   const perPage = CONFIG.rowsPerPage;
   const start = (currentPage - 1) * perPage;
   const end = start + perPage;
+
   const pageRows = state.filteredRows.slice(start, end);
   const total = state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -740,8 +846,18 @@ function renderTable() {
 
   if (!tbody) return;
 
-  if (pageRows.length === 0) {
-    tbody.innerHTML = '<tr class="table-empty-state"><td colspan="10" class="no-results">No matching records found</td></tr>';
+  if (state.rows.length === 0) {
+    tbody.innerHTML = `
+      <tr class="table-empty-state">
+        <td colspan="10" class="no-results">ยังไม่มีข้อมูลจากอุปกรณ์</td>
+      </tr>
+    `;
+  } else if (pageRows.length === 0) {
+    tbody.innerHTML = `
+      <tr class="table-empty-state">
+        <td colspan="10" class="no-results">No matching records found</td>
+      </tr>
+    `;
   } else {
     tbody.innerHTML = pageRows.map(row => `
       <tr>
@@ -764,15 +880,22 @@ function renderTable() {
 
   const rangeStart = total === 0 ? 0 : start + 1;
   const rangeEnd = Math.min(end, total);
+
   setText(DOM.pageInfo(), `Showing ${rangeStart}-${rangeEnd} of ${total} records`);
 
   const prevButton = DOM.btnPrev();
   const nextButton = DOM.btnNext();
-  if (prevButton) prevButton.disabled = currentPage <= 1;
-  if (nextButton) nextButton.disabled = currentPage >= totalPages;
+
+  if (prevButton) prevButton.disabled = currentPage <= 1 || total === 0;
+  if (nextButton) nextButton.disabled = currentPage >= totalPages || total === 0;
 
   const pageNumbers = DOM.pageNumbers();
   if (!pageNumbers) return;
+
+  if (total === 0) {
+    pageNumbers.replaceChildren();
+    return;
+  }
 
   const fragment = document.createDocumentFragment();
 
