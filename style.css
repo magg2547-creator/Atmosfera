@@ -1108,3 +1108,10 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   display: flex; justify-content: flex-end; gap: var(--sp3);
   margin-top: var(--sp6);
 }
+
+.table-empty {
+  text-align: center;
+  padding: 24px;
+  color: #9aa4b2;
+  font-style: italic;
+}
