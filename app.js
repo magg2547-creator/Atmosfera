@@ -16,12 +16,7 @@ const state = {
   table: { sortKey: 'time', sortDir: 1, currentPage: 1 },
   exportRange: { preset: 'all' },
   chartRange: '1h',
-  fetch: {
-  isFetching: false,
-  lastFetchAt: null,
-  countdown: null,
-  uiState: 'idle', // idle | ready | empty | error
-},
+  fetch: { isFetching: false, countdown: null, uiState: 'idle' },
 };
 
 const domIdCache = new Map();
