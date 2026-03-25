@@ -1157,19 +1157,27 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 }
 
 .empty-state {
-  margin: 16px 0 20px;
-  padding: 18px 20px;
-  border-radius: 16px;
-  text-align: center;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(70,99,112,.08);
+  border: 1px solid rgba(90,106,114,.14);
+  color: var(--on-surface);
 }
 
-.empty-state h3 {
-  margin: 0 0 8px;
+.empty-state[hidden] {
+  display: none !important;
 }
 
-.empty-state p {
+.empty-state-copy h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.empty-state-copy p {
   margin: 0;
-  color: #9aa4b2;
+  color: var(--on-surface-variant);
+  font-size: .92rem;
+  line-height: 1.5;
 }
