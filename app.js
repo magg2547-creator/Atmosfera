@@ -379,17 +379,12 @@ function handleFetchError(error) {
   hideEmptyState();
 
   const isFirstLoad = state.rows.length === 0;
-
   const message = isFirstLoad
     ? `Could not load data — ${error.message}`
     : `Refresh failed — showing last known data (${error.message})`;
 
-  state.fetch.uiState = 'error';
-
   showErrorBanner(message);
-  setText(DOM.lastUpdate(), 'Failed');
   showToast(`Warning: ${error.message}`);
-
   console.error('[Atmosfera] fetch error:', error);
 
   startCountdown();
@@ -499,6 +494,7 @@ async function fetchSheet() {
     const rawRows = await fetchSheetData();
 
     if (rawRows.length === 0) {
+      state.fetch.uiState = 'empty';
       renderEmptyState();
       startCountdown();
       return;
@@ -507,6 +503,8 @@ async function fetchSheet() {
     const normalizedRows = normalizeRows(rawRows);
 
     state.fetch.uiState = 'ready';
+    state.fetch.uiState = 'empty';
+    state.fetch.uiState = 'error';
     state.rows = normalizedRows;
 
     copyCurrentMetricsFromRow(normalizedRows[0]);
@@ -524,6 +522,7 @@ async function fetchSheet() {
     startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
   } catch (error) {
+    state.fetch.uiState = 'error';
     hideEmptyState();
     handleFetchError(error);
   } finally {
@@ -1202,21 +1201,60 @@ function updateCharts() {
   applyChartRange(state.chartRange);
 }
 
+function getRefreshIntervalSeconds() {
+  switch (state.fetch.uiState) {
+    case 'ready':
+      return 3600; // 1 ชั่วโมง
+    case 'empty':
+      return 30;   // 30 วินาที
+    case 'error':
+      return 30;   // 30 วินาที
+    default:
+      return 30;
+  }
+}
+
+function getRefreshCountdownText(remainingSeconds) {
+  switch (state.fetch.uiState) {
+    case 'ready': {
+      const hours = Math.floor(remainingSeconds / 3600);
+      const minutes = Math.floor((remainingSeconds % 3600) / 60);
+      const seconds = remainingSeconds % 60;
+
+      if (hours > 0) {
+        return `Next refresh in ${hours}h ${minutes}m`;
+      }
+      return `Next refresh in ${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    case 'empty':
+      return `Checking again in ${remainingSeconds}s`;
+
+    case 'error':
+      return `Retrying in ${remainingSeconds}s`;
+
+    default:
+      return `Refresh in ${remainingSeconds}s`;
+  }
+}
+
 function startCountdown() {
   clearInterval(state.fetch.countdown);
-  let remainingSeconds = CONFIG.fetchInterval / 1000;
+
+  let remainingSeconds = getRefreshIntervalSeconds();
+
+  setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
 
   state.fetch.countdown = setInterval(() => {
     remainingSeconds -= 1;
 
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    setText(DOM.lastUpdate(), `Next in ${minutes}:${String(seconds).padStart(2, '0')}`);
-
     if (remainingSeconds <= 0) {
       clearInterval(state.fetch.countdown);
       fetchSheet();
+      return;
     }
+
+    setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
   }, 1000);
 }
 
