@@ -441,6 +441,16 @@ function clearCharts() {
   });
 }
 
+function showEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = false;
+}
+
+function hideEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = true;
+}
+
 function renderEmptyState() {
   state.fetch.uiState = 'empty';
   state.rows = [];
@@ -481,24 +491,9 @@ function renderEmptyState() {
   setHTML(DOM.valVolt(), `—<span class="metric-unit">V</span>`);
   setHTML(DOM.valCurr(), `—<span class="metric-unit">A</span>`);
 
-  resetDeltaBadge(DOM.deltaPm25());
-  resetDeltaBadge(DOM.deltaPm10());
-  resetDeltaBadge(DOM.deltaTemp());
-  resetDeltaBadge(DOM.deltaHum());
-  resetDeltaBadge(DOM.deltaCo2());
-  resetDeltaBadge(DOM.deltaVolt());
-  resetDeltaBadge(DOM.deltaCurr());
-
-  setText(DOM.insightPwr(), '—');
-  setText(DOM.insightEnergy(), '—');
-  setText(DOM.insightPf(), '—');
-  setText(DOM.insightEff(), '—');
-
-  setWidth(DOM.barPwr(), 0);
-  setWidth(DOM.barEnergy(), 0);
-  setWidth(DOM.barPf(), 0);
-
-  setText(DOM.rangeSummary(), 'Date range: No records yet');
+  if (DOM.rangeSummary()) {
+    setText(DOM.rangeSummary(), 'Date range: No records yet');
+  }
 
   renderTable();
   clearCharts();
@@ -526,12 +521,12 @@ async function fetchSheet() {
 
     copyCurrentMetricsFromRow(normalizedRows[0]);
 
+    hideEmptyState();
+    hideErrorBanner();
+
     renderDashboard();
     recomputeTableView();
     updateCharts();
-
-    hideEmptyState();
-    hideErrorBanner();
 
     setText(DOM.lastUpdate(), 'Just now');
     showToast(`Loaded ${rawRows.length} records`);
@@ -539,6 +534,7 @@ async function fetchSheet() {
     startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
   } catch (error) {
+    hideEmptyState();
     handleFetchError(error);
   } finally {
     state.fetch.isFetching = false;
