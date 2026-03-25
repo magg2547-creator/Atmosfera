@@ -16,7 +16,12 @@ const state = {
   table: { sortKey: 'time', sortDir: 1, currentPage: 1 },
   exportRange: { preset: 'all' },
   chartRange: '1h',
-  fetch: { isFetching: false, countdown: null },
+  fetch: {
+  isFetching: false,
+  lastFetchAt: null,
+  countdown: null,
+  uiState: 'idle', // idle | ready | empty | error
+},
 };
 
 const domIdCache = new Map();
@@ -357,16 +362,15 @@ function copyCurrentMetricsFromRow(row) {
 }
 
 async function fetchSheetData() {
-  const response = await fetch(CONFIG.sheetUrl);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const res = await fetch(CONFIG.sheetUrl);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
 
-  const payload = await response.json();
-  if (payload.status !== 'ok') throw new Error(payload.message || 'API returned an error');
-  if (!Array.isArray(payload.data) || payload.data.length === 0) {
-    throw new Error('No records in response');
+  const json = await res.json();
+  if (json.status !== 'ok') {
+    throw new Error(json.message || 'API returned error');
   }
 
-  return payload.data;
+  return Array.isArray(json.data) ? json.data : [];
 }
 
 function handleFetchError(error) {
@@ -396,33 +400,47 @@ function hideErrorBanner() {
 
 async function fetchSheet() {
   if (state.fetch.isFetching) return;
+
   state.fetch.isFetching = true;
-  setText(DOM.lastUpdate(), 'Loading...');
+  setText(DOM.statusFeed(), 'Fetching…');
 
   try {
-    const rawRows        = await fetchSheetData();
-    const normalizedRows = normalizeRows(rawRows);
+    const rawData = await fetchSheetData();
 
-    state.rows = normalizedRows;
-    copyCurrentMetricsFromRow(normalizedRows[0]);
+    // กรณี 1: โหลดสำเร็จ แต่ยังไม่มีข้อมูล
+    if (rawData.length === 0) {
+      state.fetch.uiState = 'empty';
+      renderEmptyState();
+      startCountdown();
+      return;
+    }
+
+    // กรณี 2: โหลดสำเร็จ และมีข้อมูล
+    const latest = extractLatestRow(rawData);
+    applyLatestToState(latest);
+    syncRowsState(rawData);
 
     renderDashboard();
     recomputeTableView();
     updateCharts();
-    hideErrorBanner(); // ← เพิ่ม
 
-    setText(DOM.lastUpdate(), 'Just now');
-    showToast(`Loaded ${rawRows.length} records`);
+    state.fetch.uiState = 'ready';
+    state.fetch.lastFetchAt = new Date();
+
+    setText(DOM.statusFeed(), 'Online');
+    setText(DOM.statusLast(), 'Just now');
+
+    showToast(`Loaded ${rawData.length} records`);
     startCountdown();
-    requestAnimationFrame(() => resizeAllCharts());
-  } catch (error) {
-    handleFetchError(error);
+  } catch (err) {
+    // กรณี 3: โหลดพังจริง
+    state.fetch.uiState = 'error';
+    handleFetchError(err);
   } finally {
     state.fetch.isFetching = false;
     hideSkeleton();
   }
 }
-
 function renderMetricCards() {
   const current = state.current;
   setHTML(DOM.valPm25(), `${fmt(current.pm25)}<span class="metric-unit">&micro;g/m&sup3;</span>`);
@@ -652,6 +670,11 @@ function syncSortIndicators() {
 }
 
 function recomputeTableView() {
+  if (!state.rows.length) {
+    state.filteredRows = [];
+    renderTable();
+    return;
+  }
   state.table.currentPage = 1;
   state.filteredRows = getFilteredAndSortedRows(state.rows);
   syncRangeControls();
@@ -698,6 +721,19 @@ function applyRangePreset(preset) {
 }
 
 function renderTable() {
+  const rows = state.filteredRows || [];
+  if (!rows.length) {
+    DOM.tableBody().innerHTML = `
+      <tr>
+        <td colspan="10" class="table-empty">
+          ยังไม่มีข้อมูลจากอุปกรณ์
+        </td>
+      </tr>
+    `;
+    setText(DOM.pageInfo(), '0 / 0');
+    if (DOM.pageNumbers()) DOM.pageNumbers().innerHTML = '';
+    return;
+  }
   const { currentPage } = state.table;
   const perPage = CONFIG.rowsPerPage;
   const start = (currentPage - 1) * perPage;
@@ -1049,6 +1085,16 @@ function applyChartRange(rangeKey) {
 }
 
 function updateCharts() {
+  if (!state.rows.length) {
+    // ถ้ามี chart instance อยู่ ให้ล้าง data
+    Object.values(charts || {}).forEach(chart => {
+      if (!chart) return;
+      chart.data.labels = [];
+      chart.data.datasets.forEach(ds => ds.data = []);
+      chart.update();
+    });
+    return;
+  }
   applyChartRange(state.chartRange);
 }
 
@@ -1507,6 +1553,52 @@ function applyPdfPreset(preset) {
 
   syncPdfPresetButtons(preset); // highlight ที่เลือก
   updatePdfModalSummary();
+}
+
+function renderEmptyState() {
+  state.rows = [];
+  state.filteredRows = [];
+
+  setText(DOM.aqiScore(), '—');
+  setText(DOM.aqiStatusText(), 'No sensor data yet');
+
+  setText(DOM.bannerPm25(), '—');
+  setText(DOM.bannerPm10(), '—');
+  setText(DOM.bannerCo2(), '—');
+
+  setText(DOM.miniTemp(), '—');
+  setText(DOM.miniHum(), '—');
+  setText(DOM.miniPwr(), '—');
+
+  setText(DOM.valPm25(), '—');
+  setText(DOM.valPm10(), '—');
+  setText(DOM.valTemp(), '—');
+  setText(DOM.valHum(), '—');
+  setText(DOM.valCo2(), '—');
+  setText(DOM.valVolt(), '—');
+  setText(DOM.valCurr(), '—');
+
+  setText(DOM.insightPwr(), '—');
+  setText(DOM.insightEnergy(), '—');
+  setText(DOM.insightPf(), '—');
+  setText(DOM.insightEff(), '—');
+
+  setText(DOM.statusFeed(), 'Waiting for sensor');
+  setText(DOM.statusLast(), 'No records yet');
+
+  if (DOM.rangeSummary()) {
+    setText(DOM.rangeSummary(), 'Date range: No records yet');
+  }
+
+  if (DOM.tableBody()) {
+    DOM.tableBody().innerHTML = `
+      <tr>
+        <td colspan="10" class="table-empty">
+          ยังไม่มีข้อมูลจากอุปกรณ์
+        </td>
+      </tr>
+    `;
+  }
 }
 
 let resizeTimer = null;
