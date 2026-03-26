@@ -1,8 +1,9 @@
 'use strict';
 
 const CONFIG = {
-  sheetUrl: 'https://script.google.com/macros/s/AKfycbw8cXJF40QNeW-0-IfgTpzZBMl8ydSL9GcyG-8Y0EWo7Aa5wnNzJMwImWIFbGGF9Cu8uw/exec',
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbw8cXJF40QNeW-0-IfgTpzZBMl8ydSL9GcyG-8Y0EWo7Aa5wnNzJMwImWIFbGGF9Cu8uw/exec?token=zdlkfgmhopgmhpzoifgjhz',
   fetchInterval: 60 * 60 * 1000,
+  fetchTimeout: 15 * 1000,
   maxRows: 200,
   rowsPerPage: 10,
   chartMaxPoints: 60,
@@ -16,7 +17,14 @@ const state = {
   table: { sortKey: 'time', sortDir: 1, currentPage: 1 },
   exportRange: { preset: 'all' },
   chartRange: '1h',
-  fetch: { isFetching: false, countdown: null },
+  pdfPicker: {
+    activeField: 'from',
+    pendingAnchor: '',
+    suppressClick: false,
+    viewDate: null,
+    drag: { active: false, anchor: '', current: '', moved: false },
+  },
+  fetch: { isFetching: false, countdown: null, uiState: 'idle', lastErrorMessage: null },
 };
 
 const domIdCache = new Map();
@@ -37,6 +45,7 @@ function queryAllCached(selector) {
 }
 
 const DOM = {
+  shell: () => queryAllCached('.shell')[0] ?? null,
   heroDate: () => byId('hero-date'),
   heroClock: () => byId('hero-clock'),
   lastUpdate: () => byId('status-last'),
@@ -77,6 +86,17 @@ const DOM = {
   tableSortSelect: () => byId('table-sort-select'),
   tableSortDirection: () => byId('table-sort-direction'),
   rangeSummary: () => byId('range-summary'),
+  pdfDateFrom: () => byId('pdf-date-from'),
+  pdfDateTo: () => byId('pdf-date-to'),
+  pdfDateFromDisplay: () => byId('pdf-date-from-display'),
+  pdfDateToDisplay: () => byId('pdf-date-to-display'),
+  pdfDateFieldButtons: () => queryAllCached('[data-pdf-field]'),
+  pdfCalendarTitle: () => byId('pdf-calendar-title'),
+  pdfCalendarSubtitle: () => byId('pdf-calendar-subtitle'),
+  pdfCalendarMonths: () => byId('pdf-calendar-months'),
+  btnPdfPrevMonth: () => byId('btn-pdf-prev-month'),
+  btnPdfNextMonth: () => byId('btn-pdf-next-month'),
+  btnPdfClear: () => byId('btn-pdf-clear'),
   tableBody: () => byId('table-body'),
   pageInfo: () => byId('page-info'),
   pageNumbers: () => byId('page-numbers'),
@@ -84,6 +104,7 @@ const DOM = {
   btnNext: () => byId('btn-next'),
   sortHeaders: () => queryAllCached('thead th[data-sort]'),
   rangeChips: () => queryAllCached('.range-chip'),
+  pdfPresetButtons: () => queryAllCached('[data-pdf-preset]'),
   chartTabs: () => queryAllCached('.chart-tab'),
   toast: () => byId('toast'),
   toastMessage: () => byId('toast-message'),
@@ -91,6 +112,10 @@ const DOM = {
   skeletons: () => ['sk-pm25', 'sk-pm10', 'sk-temp', 'sk-hum', 'sk-volt', 'sk-curr', 'sk-insight']
     .map(id => byId(id))
     .filter(Boolean),
+  errorBanner:     () => byId('error-banner'),
+  errorBannerText: () => byId('error-banner-text'),
+  emptyState: () => byId('empty-state'),
+  btnErrorRetry:   () => byId('btn-error-retry'),
 };
 
 const TABLE_SORT_LABELS = Object.freeze({
@@ -105,6 +130,20 @@ const TABLE_SORT_LABELS = Object.freeze({
   pwr: 'Power',
   energy: 'Energy',
 });
+
+const METRIC_KEYS = Object.freeze([
+  'pm25',
+  'pm10',
+  'temp',
+  'hum',
+  'co2',
+  'volt',
+  'curr',
+  'pwr',
+  'energy',
+]);
+
+const PDF_WEEKDAY_LABELS = Object.freeze(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
 
 const DATE_FORMATTERS = Object.freeze({
   heroClock: new Intl.DateTimeFormat('en-GB', {
@@ -128,6 +167,15 @@ const DATE_FORMATTERS = Object.freeze({
     month: '2-digit',
     year: 'numeric',
   }),
+  pdfDisplay: new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }),
+  pdfMonth: new Intl.DateTimeFormat('en-GB', {
+    month: 'long',
+    year: 'numeric',
+  }),
 });
 
 const charts = { aq: null, co2: null, energy: null, donut: null };
@@ -138,15 +186,16 @@ const DONUT_LABEL_PLUGIN = {
     if (chart.canvas.id !== 'chart-donut') return;
 
     const { ctx, width, height } = chart;
+    const hasLiveData = state.fetch.uiState === 'ready' && state.rows.length > 0;
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255,255,255,.9)';
-    ctx.font = '700 18px Sora, sans-serif';
-    ctx.fillText(Math.round(state.current.co2), width / 2, height / 2 - 8);
+    ctx.font = '700 22px Sora, sans-serif';       // ขึ้นจาก 18px
+    ctx.fillText(hasLiveData ? Math.round(state.current.co2) : '—', width / 2, height / 2 - 10);
     ctx.fillStyle = 'rgba(255,255,255,.45)';
-    ctx.font = '400 10px Instrument Sans, sans-serif';
-    ctx.fillText('ppm', width / 2, height / 2 + 10);
+    ctx.font = '400 11px Instrument Sans, sans-serif'; // ขึ้นจาก 10px
+    ctx.fillText(hasLiveData ? 'ppm' : '', width / 2, height / 2 + 12);
     ctx.restore();
   },
 };
@@ -261,17 +310,112 @@ function formatDateTime(date) {
   return `${formatTableDate(date)} ${formatTableClock(date)}`;
 }
 
+function formatDateInputValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInputValue(value) {
+  if (!value) return null;
+
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  const parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function startOfMonth(date) {
+  const monthDate = new Date(date);
+  monthDate.setDate(1);
+  monthDate.setHours(0, 0, 0, 0);
+  return monthDate;
+}
+
+function addMonths(date, amount) {
+  const shiftedDate = new Date(date);
+  shiftedDate.setMonth(shiftedDate.getMonth() + amount);
+  return startOfMonth(shiftedDate);
+}
+
+function isSameDay(left, right) {
+  if (!(left instanceof Date) || !(right instanceof Date)) return false;
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function formatPdfDisplayDate(value) {
+  const date = value instanceof Date ? value : parseDateInputValue(value);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return 'Any day';
+  return DATE_FORMATTERS.pdfDisplay.format(date);
+}
+
+function getCalendarWeekdayIndex(date) {
+  return (date.getDay() + 6) % 7;
+}
+
+function resetPdfDragState() {
+  state.pdfPicker.drag = { active: false, anchor: '', current: '', moved: false };
+}
+
+function resetPdfPendingAnchor() {
+  state.pdfPicker.pendingAnchor = '';
+}
+
+function clearPdfClickSuppression() {
+  state.pdfPicker.suppressClick = false;
+}
+
+function armPdfClickSuppression() {
+  state.pdfPicker.suppressClick = true;
+  window.setTimeout(clearPdfClickSuppression, 0);
+}
+
+function getOrderedDateValues(left, right) {
+  if (!left && !right) return ['', ''];
+  if (!left) return [right, right];
+  if (!right) return [left, left];
+  return left <= right ? [left, right] : [right, left];
+}
+
+function getPdfCalendarVisualRange() {
+  if (state.pdfPicker.drag.active && state.pdfPicker.drag.anchor) {
+    const [fromValue, toValue] = getOrderedDateValues(
+      state.pdfPicker.drag.anchor,
+      state.pdfPicker.drag.current || state.pdfPicker.drag.anchor
+    );
+
+    return {
+      fromDate: parseDateInputValue(fromValue),
+      toDate: parseDateInputValue(toValue),
+    };
+  }
+
+  return {
+    fromDate: parseDateInputValue(DOM.pdfDateFrom()?.value),
+    toDate: parseDateInputValue(DOM.pdfDateTo()?.value),
+  };
+}
+
 function toCsvCell(value) {
   return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
 
 function calcAqiFromPm25(pm25) {
   const breakpoints = [
-    [0, 12, 0, 50],
-    [12.1, 35.4, 51, 100],
-    [35.5, 55.4, 101, 150],
+    [0,    12,    0,   50],
+    [12.1, 35.4,  51,  100],
+    [35.5, 55.4,  101, 150],
     [55.5, 150.4, 151, 200],
     [150.5, 250.4, 201, 300],
+    [250.5, 350.4, 301, 400],  // เพิ่ม
+    [350.5, 500.4, 401, 500],  // เพิ่ม
   ];
 
   for (const [low, high, aqiLow, aqiHigh] of breakpoints) {
@@ -280,7 +424,7 @@ function calcAqiFromPm25(pm25) {
     }
   }
 
-  return Math.round(pm25 * 1.5);
+  return 500; // PM2.5 > 500.4 → Hazardous ceiling
 }
 
 function calcAqiFromPm10(pm10) {
@@ -289,6 +433,9 @@ function calcAqiFromPm10(pm10) {
     [55, 154, 51, 100],
     [155, 254, 101, 150],
     [255, 354, 151, 200],
+    [355, 424, 201, 300],
+    [425, 504, 301, 400],
+    [505, 604, 401, 500],
   ];
 
   for (const [low, high, aqiLow, aqiHigh] of breakpoints) {
@@ -297,7 +444,7 @@ function calcAqiFromPm10(pm10) {
     }
   }
 
-  return Math.round(pm10 * 0.7);
+  return 500;
 }
 
 function calcAQI() {
@@ -308,10 +455,12 @@ function calcAQI() {
 }
 
 function getAqiMeta(aqi) {
-  if (aqi <= 50) return { label: 'Good - Acceptable', dot: '#a8e6c8' };
-  if (aqi <= 100) return { label: 'Moderate', dot: '#fde68a' };
+  if (aqi <= 50)  return { label: 'Good',                          dot: '#a8e6c8' };
+  if (aqi <= 100) return { label: 'Moderate',                      dot: '#fde68a' };
   if (aqi <= 150) return { label: 'Unhealthy for Sensitive Groups', dot: '#fca5a5' };
-  return { label: 'Unhealthy', dot: '#f87171' };
+  if (aqi <= 200) return { label: 'Unhealthy',                     dot: '#f87171' };
+  if (aqi <= 300) return { label: 'Very Unhealthy',                dot: '#c084fc' }; // เพิ่ม
+  return          { label: 'Hazardous',                            dot: '#9f1239' }; // เพิ่ม
 }
 
 function normalizeRow(raw) {
@@ -336,51 +485,235 @@ function normalizeRows(rawRows) {
     .slice(0, CONFIG.maxRows);
 }
 
-function copyCurrentMetricsFromRow(row) {
-  Object.assign(state.previous, state.current);
-  state.current.pm25 = row.pm25;
-  state.current.pm10 = row.pm10;
-  state.current.temp = row.temp;
-  state.current.hum = row.hum;
-  state.current.co2 = row.co2;
-  state.current.volt = row.volt;
-  state.current.curr = row.curr;
-  state.current.pwr = row.pwr;
-  state.current.energy = row.energy;
+function copyMetricValues(source, target) {
+  METRIC_KEYS.forEach(key => {
+    target[key] = source?.[key] ?? 0;
+  });
+}
+
+function syncMetricStateFromRows(rows) {
+  const [currentRow] = rows;
+  const previousRow = rows[1] ?? currentRow;
+
+  copyMetricValues(currentRow, state.current);
+  copyMetricValues(previousRow, state.previous);
 }
 
 async function fetchSheetData() {
-  const response = await fetch(CONFIG.sheetUrl);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, CONFIG.fetchTimeout);
 
-  const payload = await response.json();
-  if (payload.status !== 'ok') throw new Error(payload.message || 'API returned an error');
-  if (!Array.isArray(payload.data) || payload.data.length === 0) {
-    throw new Error('No records in response');
+  try {
+    const response = await fetch(CONFIG.sheetUrl, {
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = await response.json();
+
+    if (payload.status !== 'ok') {
+      throw new Error(payload.message || 'API returned an error');
+    }
+
+    if (!Array.isArray(payload.data)) {
+      throw new Error('Invalid data format');
+    }
+
+    return payload.data;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(CONFIG.fetchTimeout / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  return payload.data;
 }
 
-function handleFetchError(error) {
-  setText(DOM.lastUpdate(), 'Failed');
-  showToast(`Warning: ${error.message}`);
+function handleFetchError(error, options = {}) {
+  const { trigger = 'auto' } = options;
+  hideEmptyState();
+
+  const isFirstLoad = state.rows.length === 0;
+  const message = isFirstLoad
+    ? `Could not load data — ${error.message}`
+    : `Refresh failed — showing last known data (${error.message})`;
+
+  showErrorBanner(message);
+  if (trigger !== 'auto' || state.fetch.lastErrorMessage !== error.message) {
+    showToast(`Warning: ${error.message}`);
+  }
+  state.fetch.lastErrorMessage = error.message;
   console.error('[Atmosfera] fetch error:', error);
+
   startCountdown();
 }
 
-async function fetchSheet() {
+function showErrorBanner(message) {
+  const banner = DOM.errorBanner();
+  const text   = DOM.errorBannerText();
+  if (text)   text.textContent = message;
+  if (banner) banner.hidden = false;
+}
+
+function hideErrorBanner() {
+  const banner = DOM.errorBanner();
+  if (banner) banner.hidden = true;
+}
+
+function hideEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = true;
+}
+
+function resetDeltaBadge(element) {
+  if (!element) return;
+  element.className = 'delta delta-flat';
+  element.style.background = 'rgba(255,255,255,.12)';
+  element.style.color = 'rgba(255,255,255,.7)';
+  element.textContent = '—';
+}
+
+function resetMetricState() {
+  copyMetricValues(null, state.current);
+  copyMetricValues(null, state.previous);
+}
+
+function resetDashboardBadges() {
+  [
+    DOM.deltaPm25(),
+    DOM.deltaPm10(),
+    DOM.deltaTemp(),
+    DOM.deltaHum(),
+    DOM.deltaVolt(),
+    DOM.deltaCurr(),
+    DOM.deltaCo2(),
+  ].forEach(resetDeltaBadge);
+}
+
+function resetInsightPanel() {
+  setHTML(DOM.insightPwr(), `— <span style="font-size:.85rem;font-weight:400;opacity:.5">W</span>`);
+  setHTML(DOM.insightEnergy(), `— <span style="font-size:.85rem;font-weight:400;opacity:.5">kWh</span>`);
+  setHTML(DOM.insightPf(), `— <span style="font-size:.85rem;font-weight:400;opacity:.5">PF</span>`);
+  setText(DOM.insightEff(), '—');
+
+  const insightEff = DOM.insightEff();
+  if (insightEff) insightEff.style.color = '';
+
+  setWidth(DOM.barPwr(), 0);
+  setWidth(DOM.barEnergy(), 0);
+  setWidth(DOM.barPf(), 0);
+}
+
+function clearCharts() {
+  Object.values(charts).forEach(chart => {
+    if (!chart) return;
+
+    chart.data.labels = [];
+
+    if (Array.isArray(chart.data.datasets)) {
+      chart.data.datasets.forEach(dataset => {
+        dataset.data = [];
+      });
+    }
+
+    chart.update('none');
+  });
+}
+
+function showEmptyState() {
+  const empty = DOM.emptyState();
+  if (empty) empty.hidden = false;
+}
+
+function renderEmptyState() {
+  state.fetch.uiState = 'empty';
+  state.rows = [];
+  state.filteredRows = [];
+  state.table.currentPage = 1;
+  resetMetricState();
+
+  hideErrorBanner();
+  showEmptyState();
+
+  setText(DOM.lastUpdate(), 'No records yet');
+
+  setText(DOM.aqiScore(), '—');
+  setText(DOM.aqiStatusText(), 'No sensor data yet');
+
+  const aqiDot = DOM.aqiDot();
+  if (aqiDot) {
+    aqiDot.style.background = 'rgba(90,106,114,.28)';
+    aqiDot.style.boxShadow = 'none';
+  }
+
+  setText(DOM.bannerPm25(), '—');
+  setText(DOM.bannerPm10(), '—');
+  setText(DOM.bannerCo2(), '—');
+
+  setWidth(DOM.gaugePm25(), 0);
+  setWidth(DOM.gaugePm10(), 0);
+  setWidth(DOM.gaugeCo2(), 0);
+
+  setText(DOM.miniTemp(), '—');
+  setText(DOM.miniHum(), '—');
+  setText(DOM.miniPwr(), '—');
+
+  setHTML(DOM.valPm25(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valPm10(), `—<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valTemp(), `—<span class="metric-unit">C</span>`);
+  setHTML(DOM.valHum(), `—<span class="metric-unit">%</span>`);
+  setHTML(DOM.valCo2(), `—<span class="metric-unit">ppm</span>`);
+  setHTML(DOM.valVolt(), `—<span class="metric-unit">V</span>`);
+  setHTML(DOM.valCurr(), `—<span class="metric-unit">A</span>`);
+  resetDashboardBadges();
+  resetInsightPanel();
+
+  if (DOM.rangeSummary()) {
+    setText(DOM.rangeSummary(), 'Date range: No records yet');
+  }
+
+  renderTable();
+  clearCharts();
+}
+
+async function fetchSheet(options = {}) {
+  const { showLoading = false, trigger = 'auto' } = options;
+
   if (state.fetch.isFetching) return;
+
+  if (showLoading) {
+    setRefreshVisualState(true);
+  }
 
   state.fetch.isFetching = true;
   setText(DOM.lastUpdate(), 'Loading...');
 
   try {
     const rawRows = await fetchSheetData();
+
+    if (rawRows.length === 0) {
+      state.fetch.lastErrorMessage = null;
+      state.fetch.uiState = 'empty';
+      renderEmptyState();
+      startCountdown();
+      return;
+    }
+
     const normalizedRows = normalizeRows(rawRows);
 
+    state.fetch.lastErrorMessage = null;
+    state.fetch.uiState = 'ready';
     state.rows = normalizedRows;
-    copyCurrentMetricsFromRow(normalizedRows[0]);
+
+    syncMetricStateFromRows(normalizedRows);
+
+    hideEmptyState();
+    hideErrorBanner();
 
     renderDashboard();
     recomputeTableView();
@@ -388,14 +721,16 @@ async function fetchSheet() {
 
     setText(DOM.lastUpdate(), 'Just now');
     showToast(`Loaded ${rawRows.length} records`);
-    startCountdown();
 
+    startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
   } catch (error) {
-    handleFetchError(error);
+    state.fetch.uiState = 'error';
+    hideEmptyState();
+    handleFetchError(error, { trigger });
   } finally {
     state.fetch.isFetching = false;
-    hideSkeleton();
+    setRefreshVisualState(false);
   }
 }
 
@@ -548,28 +883,32 @@ function matchesSelectedRange(row) {
   return row.time >= bounds.from && row.time <= bounds.to;
 }
 
+function matchesSearchQuery(row, query = DOM.tableSearch()?.value.toLowerCase().trim() || '') {
+  if (!query) return true;
+
+  const haystack = [
+    formatDateTime(row.time),
+    row.pm25,
+    row.pm10,
+    row.temp,
+    row.hum,
+    row.co2,
+    row.volt,
+    row.curr,
+    row.pwr,
+    row.energy,
+  ].join(' ').toLowerCase();
+
+  return haystack.includes(query);
+}
+
 function filterRows(rows) {
   const query = DOM.tableSearch()?.value.toLowerCase().trim() || '';
 
   return rows.filter(row => {
     if (!matchesSelectedRange(row)) return false;
 
-    if (!query) return true;
-
-    const haystack = [
-      formatDateTime(row.time),
-      row.pm25,
-      row.pm10,
-      row.temp,
-      row.hum,
-      row.co2,
-      row.volt,
-      row.curr,
-      row.pwr,
-      row.energy,
-    ].join(' ').toLowerCase();
-
-    return haystack.includes(query);
+    return matchesSearchQuery(row, query);
   });
 }
 
@@ -579,6 +918,21 @@ function getFilteredAndSortedRows(rows = state.rows) {
 
 function getExportRows() {
   return getFilteredAndSortedRows(state.rows);
+}
+
+function getRowsMatchingCurrentSearch(rows = state.rows) {
+  const query = DOM.tableSearch()?.value.toLowerCase().trim() || '';
+  return rows.filter(row => matchesSearchQuery(row, query));
+}
+
+function sortRowsByTime(rows, direction = 'asc') {
+  const multiplier = direction === 'desc' ? -1 : 1;
+  return [...rows].sort((left, right) => (left.time - right.time) * multiplier);
+}
+
+function getLatestRowByTime(rows) {
+  if (!rows.length) return null;
+  return rows.reduce((latestRow, row) => (row.time > latestRow.time ? row : latestRow), rows[0]);
 }
 
 function getRangeSummaryText(count) {
@@ -629,10 +983,23 @@ function syncSortIndicators() {
 
 function recomputeTableView() {
   state.table.currentPage = 1;
+
+  if (state.rows.length === 0) {
+    state.filteredRows = [];
+    syncRangeControls();
+    syncSortIndicators();
+    setText(DOM.rangeSummary(), 'Date range: No records yet');
+    renderTable();
+    return;
+  }
+
   state.filteredRows = getFilteredAndSortedRows(state.rows);
+
   syncRangeControls();
   syncSortIndicators();
+
   setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
+
   renderTable();
 }
 
@@ -673,11 +1040,28 @@ function applyRangePreset(preset) {
   recomputeTableView();
 }
 
+function getPaginationItems(totalPages, currentPage) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
+}
+
 function renderTable() {
   const { currentPage } = state.table;
   const perPage = CONFIG.rowsPerPage;
   const start = (currentPage - 1) * perPage;
   const end = start + perPage;
+
   const pageRows = state.filteredRows.slice(start, end);
   const total = state.filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -685,8 +1069,18 @@ function renderTable() {
 
   if (!tbody) return;
 
-  if (pageRows.length === 0) {
-    tbody.innerHTML = '<tr class="table-empty-state"><td colspan="10" class="no-results">No matching records found</td></tr>';
+  if (state.rows.length === 0) {
+    tbody.innerHTML = `
+      <tr class="table-empty-state">
+        <td colspan="10" class="no-results">ยังไม่มีข้อมูลจากอุปกรณ์</td>
+      </tr>
+    `;
+  } else if (pageRows.length === 0) {
+    tbody.innerHTML = `
+      <tr class="table-empty-state">
+        <td colspan="10" class="no-results">No matching records found</td>
+      </tr>
+    `;
   } else {
     tbody.innerHTML = pageRows.map(row => `
       <tr>
@@ -709,27 +1103,40 @@ function renderTable() {
 
   const rangeStart = total === 0 ? 0 : start + 1;
   const rangeEnd = Math.min(end, total);
+
   setText(DOM.pageInfo(), `Showing ${rangeStart}-${rangeEnd} of ${total} records`);
 
   const prevButton = DOM.btnPrev();
   const nextButton = DOM.btnNext();
-  if (prevButton) prevButton.disabled = currentPage <= 1;
-  if (nextButton) nextButton.disabled = currentPage >= totalPages;
+
+  if (prevButton) prevButton.disabled = currentPage <= 1 || total === 0;
+  if (nextButton) nextButton.disabled = currentPage >= totalPages || total === 0;
 
   const pageNumbers = DOM.pageNumbers();
   if (!pageNumbers) return;
 
-  const fragment = document.createDocumentFragment();
-
-  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
-    if (totalPages <= 7 || Math.abs(pageNumber - currentPage) < 3 || pageNumber === 1 || pageNumber === totalPages) {
-      const button = document.createElement('button');
-      button.className = `page-btn${pageNumber === currentPage ? ' active' : ''}`;
-      button.textContent = pageNumber;
-      button.dataset.page = pageNumber;
-      fragment.appendChild(button);
-    }
+  if (total === 0) {
+    pageNumbers.replaceChildren();
+    return;
   }
+
+  const fragment = document.createDocumentFragment();
+  getPaginationItems(totalPages, currentPage).forEach(item => {
+    if (item === 'ellipsis') {
+      const ellipsis = document.createElement('span');
+      ellipsis.className = 'page-ellipsis';
+      ellipsis.textContent = '…';
+      ellipsis.setAttribute('aria-hidden', 'true');
+      fragment.appendChild(ellipsis);
+      return;
+    }
+
+    const button = document.createElement('button');
+    button.className = `page-btn${item === currentPage ? ' active' : ''}`;
+    button.textContent = item;
+    button.dataset.page = item;
+    fragment.appendChild(button);
+  });
 
   pageNumbers.replaceChildren(fragment);
 }
@@ -970,7 +1377,7 @@ function initCharts() {
     },
     options: {
       responsive: false,
-      cutout: '74%',
+      cutout: '68',
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
@@ -1000,18 +1407,28 @@ function applyChartRange(rangeKey) {
 
   const rows = getRowsForChartRange(rangeKey);
   const labels = rows.map(row => formatTimeShort(row.time));
+  const hasSinglePoint = rows.length === 1;
+
+  const applyPointVisibility = dataset => {
+    if (!dataset) return;
+    dataset.pointRadius = hasSinglePoint ? 3.5 : 0;
+    dataset.pointHoverRadius = hasSinglePoint ? 5 : 3;
+    dataset.pointHitRadius = hasSinglePoint ? 12 : 8;
+  };
 
   if (charts.aq) {
     charts.aq.data.labels = labels;
     charts.aq.data.datasets[0].data = rows.map(row => row.pm25);
     charts.aq.data.datasets[1].data = rows.map(row => row.pm10);
     charts.aq.data.datasets[2].data = Array(rows.length).fill(15);
+    charts.aq.data.datasets.forEach(applyPointVisibility);
     charts.aq.update();
   }
 
   if (charts.co2) {
     charts.co2.data.labels = labels;
     charts.co2.data.datasets[0].data = rows.map(row => row.co2);
+    charts.co2.data.datasets.forEach(applyPointVisibility);
     charts.co2.update();
   }
 
@@ -1020,29 +1437,79 @@ function applyChartRange(rangeKey) {
     charts.energy.data.datasets[0].data = rows.map(row => row.volt);
     charts.energy.data.datasets[1].data = rows.map(row => row.curr);
     charts.energy.data.datasets[2].data = rows.map(row => row.pwr);
+    charts.energy.data.datasets.forEach(applyPointVisibility);
     charts.energy.update();
   }
 }
 
 function updateCharts() {
+  if (!state.rows.length) {
+    // ถ้ามี chart instance อยู่ ให้ล้าง data
+    Object.values(charts || {}).forEach(chart => {
+      if (!chart) return;
+      chart.data.labels = [];
+      chart.data.datasets.forEach(ds => ds.data = []);
+      chart.update();
+    });
+    return;
+  }
   applyChartRange(state.chartRange);
+}
+
+function getRefreshIntervalSeconds() {
+  switch (state.fetch.uiState) {
+    case 'ready':
+      return 3600; // 1 ชั่วโมง
+    case 'empty':
+      return 30;   // 30 วินาที
+    case 'error':
+      return 30;   // 30 วินาที
+    default:
+      return 30;
+  }
+}
+
+function getRefreshCountdownText(remainingSeconds) {
+  switch (state.fetch.uiState) {
+    case 'ready': {
+      const hours = Math.floor(remainingSeconds / 3600);
+      const minutes = Math.floor((remainingSeconds % 3600) / 60);
+      const seconds = remainingSeconds % 60;
+
+      if (hours > 0) {
+        return `Next refresh in ${hours}h ${minutes}m`;
+      }
+      return `Next refresh in ${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    case 'empty':
+      return `Checking again in ${remainingSeconds}s`;
+
+    case 'error':
+      return `Retrying in ${remainingSeconds}s`;
+
+    default:
+      return `Refresh in ${remainingSeconds}s`;
+  }
 }
 
 function startCountdown() {
   clearInterval(state.fetch.countdown);
-  let remainingSeconds = CONFIG.fetchInterval / 1000;
+
+  let remainingSeconds = getRefreshIntervalSeconds();
+
+  setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
 
   state.fetch.countdown = setInterval(() => {
     remainingSeconds -= 1;
 
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    setText(DOM.lastUpdate(), `Next in ${minutes}:${String(seconds).padStart(2, '0')}`);
-
     if (remainingSeconds <= 0) {
       clearInterval(state.fetch.countdown);
-      fetchSheet();
+      fetchSheet({ showLoading: true, trigger: 'auto' });
+      return;
     }
+
+    setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
   }, 1000);
 }
 
@@ -1082,6 +1549,27 @@ function hideSkeleton() {
   });
 }
 
+function setRefreshButtonBusy(isBusy) {
+  const button = DOM.btnRefresh();
+  const icon = button?.querySelector('svg');
+
+  if (button) button.disabled = isBusy;
+  if (icon) icon.style.animation = isBusy ? 'spin 0.8s linear infinite' : '';
+}
+
+function setRefreshVisualState(isRefreshing) {
+  DOM.shell()?.classList.toggle('is-refreshing', isRefreshing);
+  setRefreshButtonBusy(isRefreshing);
+
+  if (isRefreshing) {
+    hideEmptyState();
+    showSkeleton();
+    return;
+  }
+
+  hideSkeleton();
+}
+
 let toastTimer = null;
 const skeletonHideTimers = new Map();
 
@@ -1111,24 +1599,17 @@ function getExportRowValues(row) {
   ];
 }
 
-function exportCSV() {
+function exportAllCSV() {
   const rows = getExportRows();
   if (rows.length === 0) {
-    showToast('No data to export for the selected range');
+    showToast('No data to export');
     return;
   }
 
   const headers = [
-    'Time',
-    'PM2.5 (\u00b5g/m\u00b3)',
-    'PM10 (\u00b5g/m\u00b3)',
-    'Temperature (C)',
-    'Humidity (%)',
-    'CO2 (ppm)',
-    'Voltage (V)',
-    'Current (A)',
-    'Power (W)',
-    'Energy (kWh)',
+    'Time', 'PM2.5 (\u00b5g/m\u00b3)', 'PM10 (\u00b5g/m\u00b3)',
+    'Temperature (C)', 'Humidity (%)', 'CO2 (ppm)',
+    'Voltage (V)', 'Current (A)', 'Power (W)', 'Energy (kWh)',
   ];
 
   const csvRows = [
@@ -1136,10 +1617,12 @@ function exportCSV() {
     ...rows.map(row => getExportRowValues(row).map(toCsvCell).join(',')),
   ];
 
-  const blobUrl = URL.createObjectURL(new Blob([csvRows.join('\n')], { type: 'text/csv' }));
+  const blobUrl = URL.createObjectURL(
+    new Blob([csvRows.join('\n')], { type: 'text/csv' })
+  );
   const link = document.createElement('a');
   link.href = blobUrl;
-  link.download = `atmosfera_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1148,9 +1631,14 @@ function exportCSV() {
   showToast(`Exported ${rows.length} records`);
 }
 
-function exportPDF() {
-  const rows = getExportRows();
-  if (rows.length === 0) {
+function exportPDF(rows, options = {}) {
+  if (!Array.isArray(rows)) {
+    options = rows ?? {};
+    rows = getExportRows();
+  }
+
+  const exportRows = sortRowsByTime(rows, 'asc');
+  if (exportRows.length === 0) {
     showToast('No data to export for the selected range');
     return;
   }
@@ -1166,7 +1654,8 @@ function exportPDF() {
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 12;
   const rowHeight = 6;
-  const rangeLabel = getSelectedRangeLabel();
+  const rangeLabel = options.rangeLabel || getSelectedRangeLabel();
+  const snapshotRow = getLatestRowByTime(exportRows);
   const columns = [
     { label: 'Time', width: 28, align: 'left' },
     { label: 'PM2.5', width: 18, align: 'right' },
@@ -1205,19 +1694,18 @@ function exportPDF() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text(`Generated: ${formatDateTime(new Date())}`, margin, margin + 6);
-    doc.text(`Records: ${rows.length}`, margin, margin + 11);
+    doc.text(`Records: ${exportRows.length}`, margin, margin + 11);
     doc.text(`Range: ${rangeLabel}`, margin, margin + 16);
     doc.text(`Page: ${pageNumber}`, pageWidth - margin, margin + 6, { align: 'right' });
 
-    if (pageNumber === 1) {
-      const current = state.current;
+    if (pageNumber === 1 && snapshotRow) {
       const snapshot = [
-        `PM2.5 ${fmt(current.pm25)}`,
-        `PM10 ${fmt(current.pm10)}`,
-        `Temp ${fmt(current.temp)} C`,
-        `Hum ${fmt(current.hum, 0)} %`,
-        `CO2 ${fmt(current.co2, 0)}`,
-        `Power ${fmt(current.pwr, 1)} W`,
+        `PM2.5 ${fmt(snapshotRow.pm25)}`,
+        `PM10 ${fmt(snapshotRow.pm10)}`,
+        `Temp ${fmt(snapshotRow.temp)} C`,
+        `Hum ${fmt(snapshotRow.hum, 0)} %`,
+        `CO2 ${fmt(snapshotRow.co2, 0)}`,
+        `Power ${fmt(snapshotRow.pwr, 1)} W`,
       ].join('  |  ');
 
       doc.text(snapshot, margin, margin + 22);
@@ -1249,7 +1737,7 @@ function exportPDF() {
   drawTableHeader(y);
   y += 8;
 
-  rows.forEach(row => {
+  exportRows.forEach(row => {
     if (y > pageHeight - margin) {
       doc.addPage();
       pageNumber += 1;
@@ -1263,8 +1751,8 @@ function exportPDF() {
     y += rowHeight;
   });
 
-  doc.save(`atmosfera_${new Date().toISOString().slice(0, 10)}.pdf`);
-  showToast(`Exported ${rows.length} records to PDF`);
+  doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
+  showToast(`Exported ${exportRows.length} records to PDF`);
 }
 
 function tickClock() {
@@ -1276,28 +1764,99 @@ function tickClock() {
 function manualRefresh() {
   if (state.fetch.isFetching) return;
 
-  const button = DOM.btnRefresh();
-  const icon = button?.querySelector('svg');
-
-  if (button) button.disabled = true;
-  if (icon) icon.style.animation = 'spin 0.8s linear infinite';
-
   clearInterval(state.fetch.countdown);
   setText(DOM.lastUpdate(), 'Refreshing...');
-  showSkeleton();
-
-  fetchSheet().finally(() => {
-    if (icon) icon.style.animation = '';
-    if (button) button.disabled = false;
-  });
+  fetchSheet({ showLoading: true, trigger: 'manual' });
 }
 
 function bindEvents() {
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
-  byId('btn-export-pdf')?.addEventListener('click', exportPDF);
-  byId('btn-export')?.addEventListener('click', exportCSV);
-  byId('btn-download-csv')?.addEventListener('click', exportCSV);
+  byId('btn-export-pdf')?.addEventListener('click', openPdfModal);
+  byId('btn-export')?.addEventListener('click', exportAllCSV);
+  
+  // modal
+  byId('btn-modal-close')?.addEventListener('click', closePdfModal);
+  byId('btn-modal-cancel')?.addEventListener('click', closePdfModal);
+  byId('modal-pdf')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePdfModal(); // คลิก overlay ปิด
+  });
 
+  byId('btn-modal-confirm')?.addEventListener('click', () => {
+    const selection = getPdfModalSelection();
+    closePdfModal();
+    exportPDF(selection.rows, { rangeLabel: selection.rangeLabel });
+  });
+
+  DOM.pdfDateFieldButtons().forEach(button => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.pdfField === 'to'
+        ? DOM.pdfDateTo()?.value
+        : DOM.pdfDateFrom()?.value;
+
+      if (!value) return;
+
+      syncPdfPresetButtons(null);
+      setPdfModalDates(value, value, {
+        anchorValue: value,
+        pendingAnchor: value,
+      });
+    });
+  });
+
+  DOM.btnPdfPrevMonth()?.addEventListener('click', () => {
+    state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), -1);
+    renderPdfCalendar();
+  });
+
+  DOM.btnPdfNextMonth()?.addEventListener('click', () => {
+    state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), 1);
+    renderPdfCalendar();
+  });
+
+  DOM.pdfCalendarMonths()?.addEventListener('pointerdown', event => {
+    const button = event.target.closest('.pdf-day[data-date]');
+    if (!button) return;
+    beginPdfCalendarDrag(button.dataset.date);
+  });
+
+  DOM.pdfCalendarMonths()?.addEventListener('pointerover', event => {
+    const button = event.target.closest('.pdf-day[data-date]');
+    if (!button) return;
+    updatePdfCalendarDrag(button.dataset.date);
+  });
+
+  DOM.pdfCalendarMonths()?.addEventListener('pointermove', event => {
+    if (!state.pdfPicker.drag.active) return;
+    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest('.pdf-day[data-date]');
+    if (!hovered) return;
+    updatePdfCalendarDrag(hovered.dataset.date);
+  });
+
+  DOM.pdfCalendarMonths()?.addEventListener('click', event => {
+    const button = event.target.closest('.pdf-day[data-date]');
+    if (!button) return;
+    if (state.pdfPicker.suppressClick) {
+      clearPdfClickSuppression();
+      return;
+    }
+    handlePdfCalendarDateSelection(button.dataset.date);
+  });
+
+  window.addEventListener('pointerup', finishPdfCalendarDrag);
+  window.addEventListener('pointercancel', cancelPdfCalendarDrag);
+
+  DOM.pdfPresetButtons().forEach(btn => {
+    btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
+  });
+
+  DOM.btnPdfClear()?.addEventListener('click', () => {
+    syncPdfPresetButtons(null);
+    setPdfModalDates('', '', {
+      anchorValue: formatDateInputValue(new Date()),
+      pendingAnchor: '',
+    });
+  });
+  
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
@@ -1343,6 +1902,8 @@ function bindEvents() {
   DOM.chartTabs().forEach(tab => {
     tab.addEventListener('click', () => applyChartRange(tab.dataset.range));
   });
+
+  DOM.btnErrorRetry()?.addEventListener('click', manualRefresh);
 }
 
 function resizeAllCharts() {
@@ -1364,11 +1925,326 @@ function initApp() {
   syncSortIndicators();
   setText(DOM.rangeSummary(), getRangeSummaryText(0));
 
-  showSkeleton();
   setText(DOM.lastUpdate(), 'Loading...');
 
-  fetchSheet();
+  fetchSheet({ showLoading: true, trigger: 'initial' });
   requestAnimationFrame(() => resizeAllCharts());
+}
+
+// ── PDF MODAL ──────────────────────────────────────────────
+
+function getPdfPickerViewDate() {
+  if (state.pdfPicker.viewDate instanceof Date && !Number.isNaN(state.pdfPicker.viewDate.getTime())) {
+    return startOfMonth(state.pdfPicker.viewDate);
+  }
+
+  const anchorDate = parseDateInputValue(DOM.pdfDateFrom()?.value)
+    ?? parseDateInputValue(DOM.pdfDateTo()?.value)
+    ?? new Date();
+
+  return startOfMonth(anchorDate);
+}
+
+function syncPdfDateCards() {
+  setText(DOM.pdfDateFromDisplay(), formatPdfDisplayDate(DOM.pdfDateFrom()?.value));
+  setText(DOM.pdfDateToDisplay(), formatPdfDisplayDate(DOM.pdfDateTo()?.value));
+
+  const activeField = state.pdfPicker.pendingAnchor ? 'to' : 'from';
+  DOM.pdfDateFieldButtons().forEach(button => {
+    button.classList.toggle('active', button.dataset.pdfField === activeField);
+  });
+}
+
+function renderPdfCalendarMonth(monthDate, fromDate, toDate) {
+  const monthStart = startOfMonth(monthDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const calendarSlots = 42;
+
+  const nextMonth = addMonths(monthStart, 1);
+  const lastDayOfMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 0).getDate();
+  const leadingDays = getCalendarWeekdayIndex(monthStart);
+
+  const weekdayRow = PDF_WEEKDAY_LABELS.map(label => `<span>${label}</span>`).join('');
+  const dayCells = [];
+
+  for (let index = 0; index < leadingDays; index += 1) {
+    dayCells.push('<span class="pdf-day-spacer" aria-hidden="true"></span>');
+  }
+
+  for (let day = 1; day <= lastDayOfMonth; day += 1) {
+    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+    const dateValue = formatDateInputValue(date);
+    const isToday = isSameDay(date, today);
+    const isStart = Boolean(fromDate) && isSameDay(date, fromDate);
+    const isEnd = Boolean(toDate) && isSameDay(date, toDate);
+    const isInRange = Boolean(fromDate && toDate && date > fromDate && date < toDate);
+    const classes = ['pdf-day'];
+
+    if (isToday) classes.push('is-today');
+    if (isInRange) classes.push('is-in-range');
+    if (isStart || isEnd) classes.push('is-edge');
+
+    dayCells.push(`
+      <button
+        class="${classes.join(' ')}"
+        type="button"
+        data-date="${dateValue}"
+        aria-label="${DATE_FORMATTERS.pdfDisplay.format(date)}"
+      >${day}</button>
+    `);
+  }
+
+  while (dayCells.length < calendarSlots) {
+    dayCells.push('<span class="pdf-day-spacer" aria-hidden="true"></span>');
+  }
+
+  return `
+    <section class="pdf-calendar-month">
+      <div class="pdf-calendar-month-label">${DATE_FORMATTERS.pdfMonth.format(monthStart)}</div>
+      <div class="pdf-calendar-weekdays">${weekdayRow}</div>
+      <div class="pdf-calendar-days">${dayCells.join('')}</div>
+    </section>
+  `;
+}
+
+function renderPdfCalendar() {
+  const viewDate = getPdfPickerViewDate();
+  const nextMonth = addMonths(viewDate, 1);
+  const { fromDate, toDate } = getPdfCalendarVisualRange();
+
+  state.pdfPicker.viewDate = viewDate;
+
+  setText(DOM.pdfCalendarTitle(), `${DATE_FORMATTERS.pdfMonth.format(viewDate)} — ${DATE_FORMATTERS.pdfMonth.format(nextMonth)}`);
+  setText(
+    DOM.pdfCalendarSubtitle(),
+    state.pdfPicker.drag.active
+      ? 'Release to lock the highlighted range.'
+      : state.pdfPicker.pendingAnchor
+        ? 'Click another date to extend the range, or export now for a single day.'
+        : 'Click any day for a single-date export, then click another day to extend the range.'
+  );
+
+  const months = DOM.pdfCalendarMonths();
+  if (!months) return;
+
+  months.innerHTML = [viewDate, nextMonth]
+    .map(monthDate => renderPdfCalendarMonth(monthDate, fromDate, toDate))
+    .join('');
+}
+
+function refreshPdfPickerUi() {
+  syncPdfDateCards();
+  renderPdfCalendar();
+  updatePdfModalSummary();
+}
+
+function setPdfModalDates(fromValue, toValue, options = {}) {
+  const {
+    anchorValue = fromValue || toValue,
+    pendingAnchor = '',
+  } = options;
+
+  const fromInput = DOM.pdfDateFrom();
+  const toInput = DOM.pdfDateTo();
+  if (fromInput) fromInput.value = fromValue || '';
+  if (toInput) toInput.value = toValue || '';
+
+  state.pdfPicker.activeField = pendingAnchor ? 'to' : 'from';
+  state.pdfPicker.pendingAnchor = pendingAnchor || '';
+  state.pdfPicker.viewDate = startOfMonth(
+    parseDateInputValue(anchorValue)
+    ?? parseDateInputValue(fromValue)
+    ?? parseDateInputValue(toValue)
+    ?? new Date()
+  );
+  resetPdfDragState();
+
+  refreshPdfPickerUi();
+}
+
+function handlePdfCalendarDateSelection(value) {
+  const pendingAnchor = state.pdfPicker.pendingAnchor;
+
+  if (pendingAnchor) {
+    const [nextFrom, nextTo] = getOrderedDateValues(pendingAnchor, value);
+    syncPdfPresetButtons(null);
+    setPdfModalDates(nextFrom, nextTo, {
+      anchorValue: nextFrom,
+      pendingAnchor: '',
+    });
+    return;
+  }
+
+  syncPdfPresetButtons(null);
+  setPdfModalDates(value, value, {
+    anchorValue: value,
+    pendingAnchor: value,
+  });
+}
+
+function beginPdfCalendarDrag(value) {
+  if (!value) return;
+  clearPdfClickSuppression();
+  resetPdfPendingAnchor();
+  state.pdfPicker.drag = {
+    active: true,
+    anchor: value,
+    current: value,
+    moved: false,
+  };
+  syncPdfPresetButtons(null);
+  renderPdfCalendar();
+}
+
+function updatePdfCalendarDrag(value) {
+  if (!state.pdfPicker.drag.active || !value) return;
+  if (value === state.pdfPicker.drag.current) return;
+
+  state.pdfPicker.drag.current = value;
+  state.pdfPicker.drag.moved = true;
+  renderPdfCalendar();
+}
+
+function finishPdfCalendarDrag() {
+  if (!state.pdfPicker.drag.active) return;
+
+  const {
+    anchor,
+    current,
+    moved,
+  } = state.pdfPicker.drag;
+
+  if (!moved) {
+    resetPdfDragState();
+    return;
+  }
+
+  armPdfClickSuppression();
+  const [fromValue, toValue] = getOrderedDateValues(anchor, current || anchor);
+  setPdfModalDates(fromValue, toValue, {
+    anchorValue: fromValue,
+    pendingAnchor: '',
+  });
+}
+
+function cancelPdfCalendarDrag() {
+  if (!state.pdfPicker.drag.active) return;
+  resetPdfDragState();
+}
+
+function openPdfModal() {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+  resetPdfDragState();
+  setPdfModalDates(
+    formatDateInputValue(sevenDaysAgo),
+    formatDateInputValue(today),
+    { anchorValue: formatDateInputValue(sevenDaysAgo), pendingAnchor: '' }
+  );
+  syncPdfPresetButtons('7d');
+
+  const modal = byId('modal-pdf');
+  if (modal) modal.hidden = false;
+
+  document.body.style.overflow = 'hidden'; // ล็อก scroll
+}
+
+function closePdfModal() {
+  const modal = byId('modal-pdf');
+  if (modal) modal.hidden = true;
+
+  resetPdfDragState();
+  resetPdfPendingAnchor();
+  document.body.style.overflow = ''; // คืน scroll
+}
+
+function getPdfModalSelection() {
+  const fromVal = DOM.pdfDateFrom()?.value;
+  const toVal   = DOM.pdfDateTo()?.value;
+  const baseRows = getRowsMatchingCurrentSearch(state.rows);
+
+  if (!fromVal || !toVal) {
+    return {
+      rows: sortRowsByTime(baseRows, 'asc'),
+      rangeLabel: 'All matching records',
+    };
+  }
+
+  const from = parseDateInputValue(fromVal);
+  const to   = parseDateInputValue(toVal);
+  if (!from || !to) {
+    return {
+      rows: sortRowsByTime(baseRows, 'asc'),
+      rangeLabel: 'All matching records',
+    };
+  }
+
+  to.setHours(23, 59, 59, 999);
+
+  return {
+    rows: sortRowsByTime(baseRows.filter(row => row.time >= from && row.time <= to), 'asc'),
+    rangeLabel: fromVal === toVal ? fromVal : `${fromVal} → ${toVal}`,
+  };
+}
+
+function getPdfModalRows() {
+  return getPdfModalSelection().rows;
+}
+
+function updatePdfModalSummary() {
+  const { rows, rangeLabel } = getPdfModalSelection();
+  const summary = byId('pdf-modal-summary');
+  if (!summary) return;
+
+  const fromVal = DOM.pdfDateFrom()?.value;
+  const toVal   = DOM.pdfDateTo()?.value;
+
+  if (!fromVal || !toVal) {
+    summary.textContent = `All records — ${rows.length} entries`;
+    return;
+  }
+
+  if (rows.length === 0) {
+    summary.textContent = 'No records found in this date range';
+    return;
+  }
+
+  summary.textContent = `${rangeLabel} — ${rows.length} entries`;
+}
+
+function syncPdfPresetButtons(activePreset) {
+  DOM.pdfPresetButtons().forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pdfPreset === activePreset);
+  });
+}
+
+function applyPdfPreset(preset) {
+  const today = new Date();
+  const from  = new Date(today);
+  const to    = formatDateInputValue(today);
+
+  if (preset === 'today') {
+    setPdfModalDates(to, to, { anchorValue: to, pendingAnchor: '' });
+  } else if (preset === '7d') {
+    from.setDate(from.getDate() - 6);
+    setPdfModalDates(formatDateInputValue(from), to, {
+      anchorValue: formatDateInputValue(from),
+      pendingAnchor: '',
+    });
+  } else if (preset === '30d') {
+    from.setDate(from.getDate() - 29);
+    setPdfModalDates(formatDateInputValue(from), to, {
+      anchorValue: formatDateInputValue(from),
+      pendingAnchor: '',
+    });
+  } else {
+    setPdfModalDates('', '', { anchorValue: formatDateInputValue(today), pendingAnchor: '' });
+  }
+
+  syncPdfPresetButtons(preset); // highlight ที่เลือก
 }
 
 let resizeTimer = null;
