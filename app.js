@@ -17,6 +17,7 @@ const state = {
   table: { sortKey: 'time', sortDir: 1, currentPage: 1 },
   exportRange: { preset: 'all' },
   chartRange: '1h',
+<<<<<<< HEAD
   pdfPicker: {
     activeField: 'from',
     pendingAnchor: '',
@@ -25,6 +26,9 @@ const state = {
     drag: { active: false, anchor: '', current: '', moved: false },
   },
   fetch: { isFetching: false, countdown: null, uiState: 'idle', lastErrorMessage: null },
+=======
+  fetch: { isFetching: false, countdown: null, uiState: 'idle' },
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 };
 
 const domIdCache = new Map();
@@ -192,10 +196,17 @@ const DONUT_LABEL_PLUGIN = {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255,255,255,.9)';
     ctx.font = '700 22px Sora, sans-serif';       // ขึ้นจาก 18px
+<<<<<<< HEAD
     ctx.fillText(hasLiveData ? Math.round(state.current.co2) : '—', width / 2, height / 2 - 10);
     ctx.fillStyle = 'rgba(255,255,255,.45)';
     ctx.font = '400 11px Instrument Sans, sans-serif'; // ขึ้นจาก 10px
     ctx.fillText(hasLiveData ? 'ppm' : '', width / 2, height / 2 + 12);
+=======
+    ctx.fillText(Math.round(state.current.co2), width / 2, height / 2 - 10);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = '400 11px Instrument Sans, sans-serif'; // ขึ้นจาก 10px
+    ctx.fillText('ppm', width / 2, height / 2 + 12);
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
     ctx.restore();
   },
 };
@@ -500,6 +511,7 @@ function syncMetricStateFromRows(rows) {
 }
 
 async function fetchSheetData() {
+<<<<<<< HEAD
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => {
     controller.abort();
@@ -531,11 +543,29 @@ async function fetchSheetData() {
     throw error;
   } finally {
     window.clearTimeout(timeoutId);
+=======
+  const response = await fetch(CONFIG.sheetUrl);
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const payload = await response.json();
+
+  if (payload.status !== 'ok') {
+    throw new Error(payload.message || 'API returned an error');
+  }
+
+  if (!Array.isArray(payload.data)) {
+    throw new Error('Invalid data format');
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   }
 }
 
+<<<<<<< HEAD
 function handleFetchError(error, options = {}) {
   const { trigger = 'auto' } = options;
+=======
+function handleFetchError(error) {
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   hideEmptyState();
 
   const isFirstLoad = state.rows.length === 0;
@@ -544,10 +574,14 @@ function handleFetchError(error, options = {}) {
     : `Refresh failed — showing last known data (${error.message})`;
 
   showErrorBanner(message);
+<<<<<<< HEAD
   if (trigger !== 'auto' || state.fetch.lastErrorMessage !== error.message) {
     showToast(`Warning: ${error.message}`);
   }
   state.fetch.lastErrorMessage = error.message;
+=======
+  showToast(`Warning: ${error.message}`);
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   console.error('[Atmosfera] fetch error:', error);
 
   startCountdown();
@@ -572,12 +606,17 @@ function hideEmptyState() {
 
 function resetDeltaBadge(element) {
   if (!element) return;
+<<<<<<< HEAD
   element.className = 'delta delta-flat';
+=======
+  element.className = 'delta';
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   element.style.background = 'rgba(255,255,255,.12)';
   element.style.color = 'rgba(255,255,255,.7)';
   element.textContent = '—';
 }
 
+<<<<<<< HEAD
 function resetMetricState() {
   copyMetricValues(null, state.current);
   copyMetricValues(null, state.previous);
@@ -609,6 +648,8 @@ function resetInsightPanel() {
   setWidth(DOM.barPf(), 0);
 }
 
+=======
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 function clearCharts() {
   Object.values(charts).forEach(chart => {
     if (!chart) return;
@@ -635,7 +676,10 @@ function renderEmptyState() {
   state.rows = [];
   state.filteredRows = [];
   state.table.currentPage = 1;
+<<<<<<< HEAD
   resetMetricState();
+=======
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 
   hideErrorBanner();
   showEmptyState();
@@ -670,8 +714,11 @@ function renderEmptyState() {
   setHTML(DOM.valCo2(), `—<span class="metric-unit">ppm</span>`);
   setHTML(DOM.valVolt(), `—<span class="metric-unit">V</span>`);
   setHTML(DOM.valCurr(), `—<span class="metric-unit">A</span>`);
+<<<<<<< HEAD
   resetDashboardBadges();
   resetInsightPanel();
+=======
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 
   if (DOM.rangeSummary()) {
     setText(DOM.rangeSummary(), 'Date range: No records yet');
@@ -681,9 +728,13 @@ function renderEmptyState() {
   clearCharts();
 }
 
+<<<<<<< HEAD
 async function fetchSheet(options = {}) {
   const { showLoading = false, trigger = 'auto' } = options;
 
+=======
+async function fetchSheet() {
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   if (state.fetch.isFetching) return;
 
   if (showLoading) {
@@ -697,7 +748,10 @@ async function fetchSheet(options = {}) {
     const rawRows = await fetchSheetData();
 
     if (rawRows.length === 0) {
+<<<<<<< HEAD
       state.fetch.lastErrorMessage = null;
+=======
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
       state.fetch.uiState = 'empty';
       renderEmptyState();
       startCountdown();
@@ -706,11 +760,23 @@ async function fetchSheet(options = {}) {
 
     const normalizedRows = normalizeRows(rawRows);
 
+<<<<<<< HEAD
     state.fetch.lastErrorMessage = null;
     state.fetch.uiState = 'ready';
     state.rows = normalizedRows;
 
     syncMetricStateFromRows(normalizedRows);
+
+    hideEmptyState();
+    hideErrorBanner();
+=======
+    state.fetch.uiState = 'ready';
+    state.fetch.uiState = 'empty';
+    state.fetch.uiState = 'error';
+    state.rows = normalizedRows;
+
+    copyCurrentMetricsFromRow(normalizedRows[0]);
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 
     hideEmptyState();
     hideErrorBanner();
@@ -727,7 +793,11 @@ async function fetchSheet(options = {}) {
   } catch (error) {
     state.fetch.uiState = 'error';
     hideEmptyState();
+<<<<<<< HEAD
     handleFetchError(error, { trigger });
+=======
+    handleFetchError(error);
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   } finally {
     state.fetch.isFetching = false;
     setRefreshVisualState(false);
@@ -1118,6 +1188,21 @@ function renderTable() {
   if (total === 0) {
     pageNumbers.replaceChildren();
     return;
+<<<<<<< HEAD
+=======
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+    if (totalPages <= 7 || Math.abs(pageNumber - currentPage) < 3 || pageNumber === 1 || pageNumber === totalPages) {
+      const button = document.createElement('button');
+      button.className = `page-btn${pageNumber === currentPage ? ' active' : ''}`;
+      button.textContent = pageNumber;
+      button.dataset.page = pageNumber;
+      fragment.appendChild(button);
+    }
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   }
 
   const fragment = document.createDocumentFragment();
@@ -1505,7 +1590,11 @@ function startCountdown() {
 
     if (remainingSeconds <= 0) {
       clearInterval(state.fetch.countdown);
+<<<<<<< HEAD
       fetchSheet({ showLoading: true, trigger: 'auto' });
+=======
+      fetchSheet();
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
       return;
     }
 
@@ -1600,7 +1689,11 @@ function getExportRowValues(row) {
 }
 
 function exportAllCSV() {
+<<<<<<< HEAD
   const rows = getExportRows();
+=======
+  const rows = [...state.rows].sort((a, b) => b.time - a.time);
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   if (rows.length === 0) {
     showToast('No data to export');
     return;
@@ -1622,7 +1715,11 @@ function exportAllCSV() {
   );
   const link = document.createElement('a');
   link.href = blobUrl;
+<<<<<<< HEAD
   link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
+=======
+  link.download = `atmosfera_all_${new Date().toISOString().slice(0, 10)}.csv`;
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1631,6 +1728,7 @@ function exportAllCSV() {
   showToast(`Exported ${rows.length} records`);
 }
 
+<<<<<<< HEAD
 function exportPDF(rows, options = {}) {
   if (!Array.isArray(rows)) {
     options = rows ?? {};
@@ -1639,6 +1737,11 @@ function exportPDF(rows, options = {}) {
 
   const exportRows = sortRowsByTime(rows, 'asc');
   if (exportRows.length === 0) {
+=======
+function exportPDF(rows) {
+  if (!Array.isArray(rows)) rows = getExportRows();
+  if (rows.length === 0) {
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
     showToast('No data to export for the selected range');
     return;
   }
@@ -1782,6 +1885,7 @@ function bindEvents() {
   });
 
   byId('btn-modal-confirm')?.addEventListener('click', () => {
+<<<<<<< HEAD
     const selection = getPdfModalSelection();
     closePdfModal();
     exportPDF(selection.rows, { rangeLabel: selection.rangeLabel });
@@ -1856,6 +1960,25 @@ function bindEvents() {
       pendingAnchor: '',
     });
   });
+=======
+    const rows = getPdfModalRows();
+    closePdfModal();
+    exportPDF(rows);
+  });
+
+  byId('pdf-date-from')?.addEventListener('change', () => {
+  syncPdfPresetButtons(null);
+  updatePdfModalSummary();
+});
+  byId('pdf-date-to')?.addEventListener('change', () => {
+  syncPdfPresetButtons(null);
+  updatePdfModalSummary();
+});
+
+  document.querySelectorAll('[data-pdf-preset]').forEach(btn => {
+    btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
+  });
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
   
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
@@ -1933,6 +2056,7 @@ function initApp() {
 
 // ── PDF MODAL ──────────────────────────────────────────────
 
+<<<<<<< HEAD
 function getPdfPickerViewDate() {
   if (state.pdfPicker.viewDate instanceof Date && !Number.isNaN(state.pdfPicker.viewDate.getTime())) {
     return startOfMonth(state.pdfPicker.viewDate);
@@ -2145,6 +2269,19 @@ function openPdfModal() {
     { anchorValue: formatDateInputValue(sevenDaysAgo), pendingAnchor: '' }
   );
   syncPdfPresetButtons('7d');
+=======
+function openPdfModal() {
+  const today = new Date().toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+
+  const fromInput = byId('pdf-date-from');
+  const toInput   = byId('pdf-date-to');
+  if (fromInput) fromInput.value = sevenDaysAgo;
+  if (toInput)   toInput.value   = today;
+
+  syncPdfPresetButtons('7d'); // highlight default preset
+  updatePdfModalSummary();
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 
   const modal = byId('modal-pdf');
   if (modal) modal.hidden = false;
@@ -2156,6 +2293,7 @@ function closePdfModal() {
   const modal = byId('modal-pdf');
   if (modal) modal.hidden = true;
 
+<<<<<<< HEAD
   resetPdfDragState();
   resetPdfPendingAnchor();
   document.body.style.overflow = ''; // คืน scroll
@@ -2201,6 +2339,31 @@ function updatePdfModalSummary() {
 
   const fromVal = DOM.pdfDateFrom()?.value;
   const toVal   = DOM.pdfDateTo()?.value;
+=======
+  document.body.style.overflow = ''; // คืน scroll
+}
+
+function getPdfModalRows() {
+  const fromVal = byId('pdf-date-from')?.value;
+  const toVal   = byId('pdf-date-to')?.value;
+
+  if (!fromVal || !toVal) return state.rows;
+
+  const from = new Date(fromVal);
+  const to   = new Date(toVal);
+  to.setHours(23, 59, 59, 999);
+
+  return state.rows.filter(row => row.time >= from && row.time <= to);
+}
+
+function updatePdfModalSummary() {
+  const rows    = getPdfModalRows();
+  const summary = byId('pdf-modal-summary');
+  if (!summary) return;
+
+  const fromVal = byId('pdf-date-from')?.value;
+  const toVal   = byId('pdf-date-to')?.value;
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 
   if (!fromVal || !toVal) {
     summary.textContent = `All records — ${rows.length} entries`;
@@ -2212,11 +2375,19 @@ function updatePdfModalSummary() {
     return;
   }
 
+<<<<<<< HEAD
   summary.textContent = `${rangeLabel} — ${rows.length} entries`;
 }
 
 function syncPdfPresetButtons(activePreset) {
   DOM.pdfPresetButtons().forEach(btn => {
+=======
+  summary.textContent = `${fromVal} → ${toVal} — ${rows.length} entries`;
+}
+
+function syncPdfPresetButtons(activePreset) {
+  document.querySelectorAll('[data-pdf-preset]').forEach(btn => {
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
     btn.classList.toggle('active', btn.dataset.pdfPreset === activePreset);
   });
 }
@@ -2224,6 +2395,7 @@ function syncPdfPresetButtons(activePreset) {
 function applyPdfPreset(preset) {
   const today = new Date();
   const from  = new Date(today);
+<<<<<<< HEAD
   const to    = formatDateInputValue(today);
 
   if (preset === 'today') {
@@ -2245,6 +2417,28 @@ function applyPdfPreset(preset) {
   }
 
   syncPdfPresetButtons(preset); // highlight ที่เลือก
+=======
+  const to    = today.toISOString().slice(0, 10);
+
+  if (preset === 'today') {
+    byId('pdf-date-from').value = to;
+    byId('pdf-date-to').value   = to;
+  } else if (preset === '7d') {
+    from.setDate(from.getDate() - 6);
+    byId('pdf-date-from').value = from.toISOString().slice(0, 10);
+    byId('pdf-date-to').value   = to;
+  } else if (preset === '30d') {
+    from.setDate(from.getDate() - 29);
+    byId('pdf-date-from').value = from.toISOString().slice(0, 10);
+    byId('pdf-date-to').value   = to;
+  } else {
+    byId('pdf-date-from').value = '';
+    byId('pdf-date-to').value   = '';
+  }
+
+  syncPdfPresetButtons(preset); // highlight ที่เลือก
+  updatePdfModalSummary();
+>>>>>>> d77be50e3a6918fa06ec2caf6a0e021d6e6f7b4f
 }
 
 let resizeTimer = null;
