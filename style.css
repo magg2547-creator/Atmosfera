@@ -160,6 +160,8 @@ nav {
   gap: var(--sp3); flex-wrap: wrap; flex: 1 1 32rem; min-width: 0;
 }
 .nav-actions > * { min-width: 0; }
+.nav-actions .chip,
+.nav-actions .btn-primary { max-width: 100%; }
 
 .chip {
   font-size: .75rem; font-weight: 500; color: var(--on-surface);
@@ -816,6 +818,7 @@ thead th.sorted[data-sort-dir='desc'] .sort-icon::after {
 .page-btn { font-size: .75rem; font-weight: 500; color: var(--on-surface-variant); background: linear-gradient(135deg, rgba(255,255,255,.32), rgba(236,244,247,.16)); border: 1px solid rgba(255,255,255,.34); border-radius: var(--r-md); padding: 6px 12px; cursor: pointer; transition: background .2s, color .2s, border-color .2s; font-family: var(--font-body); box-shadow: inset 0 1px 0 rgba(255,255,255,.52); }
 .page-btn:hover, .page-btn.active { background: linear-gradient(135deg, rgba(84,113,122,.96), rgba(64,115,120,.84)); color: var(--on-primary); border-color: rgba(255,255,255,.22); }
 .page-btn:disabled { opacity: .35; cursor: default; background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(236,244,247,.12)); color: var(--on-surface-variant); }
+.page-buttons > .page-btn { white-space: nowrap; }
 .page-ellipsis { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; padding: 6px 4px; color: var(--on-surface-variant); font-size: .82rem; font-weight: 700; user-select: none; }
 .no-results { text-align: center; padding: var(--sp10); color: var(--on-surface-variant); font-size: .85rem; }
 .empty-state {
@@ -1032,6 +1035,8 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .records-table tbody td.td-value {
     font-size: .94rem;
     justify-self: stretch;
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
   .records-table tbody tr.table-empty-state {
     display: block;
@@ -1078,6 +1083,79 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   #page-numbers  { justify-content: center; flex: 1 1 auto; }
   .empty-state   { align-items: flex-start; }
   .error-banner  { align-items: flex-start; }
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    border-radius: 28px 28px 0 0;
+    border-bottom: 0;
+    padding: var(--sp4);
+    box-shadow: 0 -14px 48px rgba(21,33,38,.16);
+  }
+  .modal-header {
+    margin-bottom: var(--sp4);
+    padding-bottom: var(--sp2);
+  }
+  .modal-title {
+    font-size: 1rem;
+  }
+  .modal-body {
+    gap: var(--sp3);
+    padding-right: 0;
+  }
+  .modal-description {
+    font-size: .86rem;
+    line-height: 1.45;
+  }
+  .pdf-date-card {
+    padding: 14px 16px;
+    border-radius: 22px;
+  }
+  .pdf-date-card-value {
+    font-size: 1rem;
+  }
+  .pdf-calendar-shell {
+    padding: 14px;
+    border-radius: 24px;
+  }
+  .pdf-calendar-title {
+    font-size: .96rem;
+  }
+  .pdf-calendar-subtitle {
+    font-size: .78rem;
+    line-height: 1.4;
+  }
+  .pdf-calendar-weekdays span {
+    font-size: .6rem;
+    letter-spacing: .04em;
+  }
+  .pdf-calendar-days {
+    gap: 4px;
+  }
+  .pdf-day-spacer,
+  .pdf-day {
+    min-height: 32px;
+  }
+  .modal-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal-presets .range-chip {
+    width: 100%;
+    justify-content: center;
+  }
+  .modal-summary {
+    line-height: 1.45;
+  }
+  .modal-footer {
+    margin-top: var(--sp4);
+    padding-top: var(--sp3);
+    padding-bottom: calc(var(--sp2) + env(safe-area-inset-bottom, 0px));
+  }
   .pdf-range-shell { grid-template-columns: 1fr; }
   .pdf-range-divider { width: 100%; height: 24px; }
   .pdf-range-divider span { width: 28px; }
@@ -1088,12 +1166,15 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .hero-eyebrow  { margin-bottom: var(--sp3); }
   .hero-meta     { padding: var(--sp4); border-radius: calc(var(--r-xl) - 1rem); }
   .hero-date     { font-size: .7rem; }
+  nav            { position: static; top: auto; margin-top: 8px; margin-bottom: var(--sp6); border-radius: calc(var(--r-xl) - .9rem); }
+  .nav-actions   { display: flex; flex-direction: column; align-items: stretch; }
+  .nav-actions > * { width: 100%; }
   .nav-actions > .chip:first-child {
-    flex: 1 1 100%;
     justify-content: center;
   }
   #last-update-chip {
-    flex: 1 1 calc(50% - var(--sp2));
+    width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
     justify-content: center;
     overflow: hidden;
@@ -1108,14 +1189,38 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   #btn-refresh,
   #btn-export-pdf,
   #btn-export {
-    flex: 1 1 calc(50% - var(--sp2));
+    width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
     justify-content: center;
+    padding-inline: var(--sp4);
+    text-align: center;
   }
   .section-action { width: 100%; text-align: left; }
   .range-summary  { border-radius: var(--r-lg); }
   .table-card     { padding: var(--sp6) var(--sp4); }
-  .modal          { padding: var(--sp6) var(--sp4); }
+  .table-pagination { align-items: stretch; }
+  .page-buttons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  #page-numbers {
+    order: -1;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .page-btn { min-width: fit-content; }
+  .page-buttons > .page-btn {
+    width: 100%;
+    min-width: 0;
+  }
+  .modal-overlay  { align-items: flex-end; padding: 0; }
+  .modal          { padding: var(--sp4); max-height: 100dvh; }
   .modal-presets .range-chip {
     flex: 1 1 calc(50% - var(--sp2));
     text-align: center;
@@ -1134,10 +1239,99 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   footer          { flex-direction: column; align-items: flex-start; gap: var(--sp2); }
 }
 @media (max-width: 480px) {
+  .shell        { padding: 0 var(--sp3) var(--sp8); }
+  nav           { padding: var(--sp3); }
   .metric-grid  { grid-template-columns: 1fr; }
   .status-strip { grid-template-columns: 1fr; }
+  .hero         { padding: var(--sp6) 0 var(--sp4); gap: var(--sp3); }
+  .hero-title   { font-size: clamp(1.85rem, 10vw, 2.35rem); }
+  .hero-title br { display: none; }
+  .hero-meta    { padding: var(--sp3); }
+  .aqi-banner,
+  .chart-card,
+  .table-card,
+  .metric-card,
+  .energy-card,
+  .insight-panel { padding: var(--sp4); border-radius: calc(var(--r-xl) - .8rem); }
+  .aqi-mini-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp3);
+    width: 100%;
+  }
+  .aqi-mini-stat { text-align: left; }
+  .aqi-mini-value { font-size: 1.2rem; }
+  .chart-header,
+  .pdf-calendar-header { gap: var(--sp2); }
+  .modal {
+    border-radius: 24px 24px 0 0;
+    padding: var(--sp3);
+  }
+  .modal-header {
+    margin-bottom: var(--sp3);
+  }
+  .modal-body {
+    gap: var(--sp2);
+  }
+  .modal-kicker {
+    font-size: .64rem;
+  }
+  .pdf-date-card {
+    padding: 13px 14px;
+    gap: 6px;
+  }
+  .pdf-date-card-label {
+    font-size: .66rem;
+  }
+  .pdf-date-card-value {
+    font-size: .94rem;
+  }
+  .pdf-calendar-shell {
+    padding: 12px;
+  }
+  .pdf-calendar-month-label {
+    font-size: .76rem;
+  }
+  .pdf-calendar-weekdays span {
+    font-size: .56rem;
+  }
+  .pdf-day-spacer,
+  .pdf-day {
+    min-height: 28px;
+    border-radius: 12px;
+    font-size: .78rem;
+  }
+  .modal-presets {
+    grid-template-columns: 1fr;
+  }
+  .modal-footer {
+    gap: var(--sp2);
+  }
+  .chart-legend { display: grid; grid-template-columns: 1fr; gap: var(--sp2); }
+  .range-chip-group {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .range-chip-group::-webkit-scrollbar { display: none; }
+  .range-chip-group .range-chip {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: center;
+  }
   .mobile-sort-controls { grid-template-columns: 1fr; }
   .records-table tbody tr { grid-template-columns: 1fr; }
+  .records-table tbody td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .records-table tbody td::before { white-space: normal; }
+  .table-pagination { gap: var(--sp2); }
+  .page-info { font-size: .72rem; }
   .chart-wrap   { height: 180px; }
 }
 
@@ -1181,6 +1375,7 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   backdrop-filter: blur(7px);
   display: flex; align-items: center; justify-content: center;
   padding: var(--sp6);
+  overflow-y: auto;
 }
 .modal-overlay[hidden] { display: none; }
 .modal {
@@ -1193,10 +1388,15 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   width: 100%; max-width: 720px;
   padding: var(--sp8);
+  max-height: min(100%, calc(100vh - (var(--sp6) * 2)));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: var(--sp6);
+  flex-shrink: 0;
 }
 .modal-title {
   font-family: var(--font-display); font-size: 1.1rem;
@@ -1210,21 +1410,35 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   transition: background .2s;
 }
 .modal-close:hover { background: rgba(255,255,255,.68); }
-.modal-body   { display: flex; flex-direction: column; gap: var(--sp4); }
-.modal-intro  { display: grid; gap: 6px; }
-.modal-kicker {
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: #4f7680;
+.modal-body   { display: flex; flex-direction: column; gap: var(--sp3); overflow-y: auto; min-height: 0; padding-right: 4px; }
+.modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(92,123,130,.55) rgba(255,255,255,.18);
 }
-.modal-description {
-  margin: 0;
-  max-width: 32rem;
-  color: var(--on-surface-variant);
-  font-size: .92rem;
-  line-height: 1.55;
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+.modal-body::-webkit-scrollbar-track {
+  margin: 8px 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(225,234,235,.22));
+  border: 1px solid rgba(255,255,255,.28);
+}
+.modal-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background:
+    padding-box linear-gradient(180deg, rgba(96,126,132,.82), rgba(74,106,114,.66));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.32),
+    0 4px 10px rgba(58,84,90,.12);
+}
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background:
+    padding-box linear-gradient(180deg, rgba(88,120,126,.92), rgba(63,100,108,.82));
+}
+.modal-body::-webkit-scrollbar-corner {
+  background: transparent;
 }
 .pdf-range-shell {
   display: grid;
@@ -1478,23 +1692,181 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   flex-wrap: wrap;
   gap: var(--sp2);
 }
-.range-chip-clear {
-  margin-left: auto;
-  border-style: dashed;
-  color: #6c5850;
-  background: linear-gradient(145deg, rgba(255,250,244,.78), rgba(243,232,224,.46));
-}
-.range-chip-clear:hover {
-  border-color: rgba(128,113,84,.38);
-  color: #5d4b44;
-}
 .modal-summary {
-  font-size: .82rem; color: var(--on-surface-variant);
-  background: rgba(255,255,255,.36); border: 1px solid rgba(255,255,255,.4);
-  border-radius: var(--r-md); padding: var(--sp3) var(--sp4);
-  min-height: 36px; display: flex; align-items: center;
+  font-size: .8rem;
+  color: var(--on-surface-variant);
+  background: linear-gradient(135deg, rgba(255,255,255,.36), rgba(236,244,247,.20));
+  border: 1px solid rgba(255,255,255,.38);
+  border-radius: calc(var(--r-lg) - 2px);
+  padding: var(--sp3) var(--sp4);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.52);
 }
 .modal-footer {
-  display: flex; justify-content: flex-end; gap: var(--sp3);
-  margin-top: var(--sp6);
+  display: flex; justify-content: flex-end; gap: var(--sp2);
+  margin-top: var(--sp3);
+  flex-shrink: 0;
+  padding-top: 0;
+  border-top: 0;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    border-radius: 28px 28px 0 0;
+    border-bottom: 0;
+    padding: var(--sp4);
+    box-shadow: 0 -14px 48px rgba(21,33,38,.16);
+  }
+  .modal-header {
+    margin-bottom: var(--sp4);
+    padding-bottom: var(--sp2);
+  }
+  .modal-title {
+    font-size: 1rem;
+  }
+  .modal-body {
+    gap: var(--sp3);
+    padding-right: 0;
+  }
+  .modal-description {
+    font-size: .86rem;
+    line-height: 1.45;
+  }
+  .pdf-range-shell {
+    grid-template-columns: 1fr;
+  }
+  .pdf-range-divider {
+    width: 100%;
+    height: 24px;
+  }
+  .pdf-range-divider span {
+    width: 28px;
+  }
+  .pdf-date-card {
+    padding: 14px 16px;
+    border-radius: 22px;
+  }
+  .pdf-date-card-value {
+    font-size: 1rem;
+  }
+  .pdf-calendar-shell {
+    padding: 14px;
+    border-radius: 24px;
+  }
+  .pdf-calendar-header {
+    flex-direction: column;
+    gap: var(--sp2);
+  }
+  .pdf-calendar-title {
+    font-size: .96rem;
+  }
+  .pdf-calendar-subtitle {
+    font-size: .78rem;
+    line-height: 1.4;
+  }
+  .pdf-calendar-nav {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .pdf-calendar-months {
+    grid-template-columns: 1fr;
+    gap: var(--sp4);
+  }
+  .pdf-calendar-months::before,
+  .pdf-calendar-months::after {
+    display: none;
+  }
+  .pdf-calendar-month:first-child,
+  .pdf-calendar-month:last-child {
+    padding-inline: 0;
+  }
+  .pdf-calendar-weekdays span {
+    font-size: .6rem;
+    letter-spacing: .04em;
+  }
+  .pdf-calendar-days {
+    gap: 4px;
+  }
+  .pdf-day-spacer,
+  .pdf-day {
+    min-height: 32px;
+  }
+  .modal-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal-presets .range-chip {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  .modal-summary {
+    line-height: 1.45;
+  }
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: var(--sp2);
+    margin-top: var(--sp2);
+    padding-top: 0;
+    padding-bottom: calc(var(--sp2) + env(safe-area-inset-bottom, 0px));
+  }
+  .btn-secondary,
+  .btn-confirm {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal {
+    border-radius: 24px 24px 0 0;
+    padding: var(--sp3);
+  }
+  .modal-header {
+    margin-bottom: var(--sp3);
+  }
+  .modal-body {
+    gap: var(--sp2);
+  }
+  .modal-kicker {
+    font-size: .64rem;
+  }
+  .pdf-date-card {
+    padding: 13px 14px;
+    gap: 6px;
+  }
+  .pdf-date-card-label {
+    font-size: .66rem;
+  }
+  .pdf-date-card-value {
+    font-size: .94rem;
+  }
+  .pdf-calendar-shell {
+    padding: 12px;
+  }
+  .pdf-calendar-month-label {
+    font-size: .76rem;
+  }
+  .pdf-calendar-weekdays span {
+    font-size: .56rem;
+  }
+  .pdf-day-spacer,
+  .pdf-day {
+    min-height: 28px;
+    border-radius: 12px;
+    font-size: .78rem;
+  }
+  .modal-presets {
+    grid-template-columns: 1fr;
+  }
 }

@@ -229,6 +229,26 @@ function parseTimestamp(value) {
   }
 
   const raw = String(value).trim();
+
+  // Prefer the canonical Apps Script format: yyyy-MM-dd HH:mm:ss
+  const appsScriptMatch = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/
+  );
+
+  if (appsScriptMatch) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = appsScriptMatch;
+    const parsedDate = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    );
+
+    if (!Number.isNaN(parsedDate.getTime())) return parsedDate;
+  }
+
   const normalized = raw.replace(' ', 'T');
   const directDate = new Date(normalized);
   if (!Number.isNaN(directDate.getTime())) return directDate;
@@ -481,8 +501,7 @@ function normalizeRow(raw) {
 function normalizeRows(rawRows) {
   return rawRows
     .map(normalizeRow)
-    .reverse()
-    .slice(0, CONFIG.maxRows);
+    .reverse();
 }
 
 function copyMetricValues(source, target) {
@@ -720,7 +739,7 @@ async function fetchSheet(options = {}) {
     updateCharts();
 
     setText(DOM.lastUpdate(), 'Just now');
-    showToast(`Loaded ${rawRows.length} records`);
+    showToast(`Loaded ${normalizedRows.length} records`);
 
     startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
@@ -2019,10 +2038,10 @@ function renderPdfCalendar() {
   setText(
     DOM.pdfCalendarSubtitle(),
     state.pdfPicker.drag.active
-      ? 'Release to lock the highlighted range.'
+      ? 'Release to confirm the range.'
       : state.pdfPicker.pendingAnchor
-        ? 'Click another date to extend the range, or export now for a single day.'
-        : 'Click any day for a single-date export, then click another day to extend the range.'
+        ? 'Tap another date to extend the range.'
+        : 'Tap one date or drag across days.'
   );
 
   const months = DOM.pdfCalendarMonths();
