@@ -1083,79 +1083,6 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   #page-numbers  { justify-content: center; flex: 1 1 auto; }
   .empty-state   { align-items: flex-start; }
   .error-banner  { align-items: flex-start; }
-  .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-  .modal {
-    width: 100%;
-    max-width: none;
-    max-height: 100dvh;
-    border-radius: 28px 28px 0 0;
-    border-bottom: 0;
-    padding: var(--sp4);
-    box-shadow: 0 -14px 48px rgba(21,33,38,.16);
-  }
-  .modal-header {
-    margin-bottom: var(--sp4);
-    padding-bottom: var(--sp2);
-  }
-  .modal-title {
-    font-size: 1rem;
-  }
-  .modal-body {
-    gap: var(--sp3);
-    padding-right: 0;
-  }
-  .modal-description {
-    font-size: .86rem;
-    line-height: 1.45;
-  }
-  .pdf-date-card {
-    padding: 14px 16px;
-    border-radius: 22px;
-  }
-  .pdf-date-card-value {
-    font-size: 1rem;
-  }
-  .pdf-calendar-shell {
-    padding: 14px;
-    border-radius: 24px;
-  }
-  .pdf-calendar-title {
-    font-size: .96rem;
-  }
-  .pdf-calendar-subtitle {
-    font-size: .78rem;
-    line-height: 1.4;
-  }
-  .pdf-calendar-weekdays span {
-    font-size: .6rem;
-    letter-spacing: .04em;
-  }
-  .pdf-calendar-days {
-    gap: 4px;
-  }
-  .pdf-day-spacer,
-  .pdf-day {
-    min-height: 32px;
-  }
-  .modal-presets {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .modal-presets .range-chip {
-    width: 100%;
-    justify-content: center;
-  }
-  .modal-summary {
-    line-height: 1.45;
-  }
-  .modal-footer {
-    margin-top: var(--sp4);
-    padding-top: var(--sp3);
-    padding-bottom: calc(var(--sp2) + env(safe-area-inset-bottom, 0px));
-  }
   .pdf-range-shell { grid-template-columns: 1fr; }
   .pdf-range-divider { width: 100%; height: 24px; }
   .pdf-range-divider span { width: 28px; }
@@ -1219,20 +1146,6 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
     width: 100%;
     min-width: 0;
   }
-  .modal-overlay  { align-items: flex-end; padding: 0; }
-  .modal          { padding: var(--sp4); max-height: 100dvh; }
-  .modal-presets .range-chip {
-    flex: 1 1 calc(50% - var(--sp2));
-    text-align: center;
-  }
-  .range-chip-clear { margin-left: 0; }
-  .pdf-calendar-shell { padding: 16px 14px; }
-  .pdf-calendar-header { flex-direction: column; }
-  .pdf-calendar-nav { width: 100%; justify-content: flex-end; }
-  .pdf-day { min-height: 34px; border-radius: 14px; }
-  .modal-footer   { flex-direction: column-reverse; }
-  .btn-secondary,
-  .btn-confirm    { width: 100%; }
   .empty-state    { flex-direction: column; }
   .error-retry    { width: 100%; }
   .toast          { left: var(--sp4); right: var(--sp4); max-width: none; }
@@ -1263,50 +1176,6 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .aqi-mini-value { font-size: 1.2rem; }
   .chart-header,
   .pdf-calendar-header { gap: var(--sp2); }
-  .modal {
-    border-radius: 24px 24px 0 0;
-    padding: var(--sp3);
-  }
-  .modal-header {
-    margin-bottom: var(--sp3);
-  }
-  .modal-body {
-    gap: var(--sp2);
-  }
-  .modal-kicker {
-    font-size: .64rem;
-  }
-  .pdf-date-card {
-    padding: 13px 14px;
-    gap: 6px;
-  }
-  .pdf-date-card-label {
-    font-size: .66rem;
-  }
-  .pdf-date-card-value {
-    font-size: .94rem;
-  }
-  .pdf-calendar-shell {
-    padding: 12px;
-  }
-  .pdf-calendar-month-label {
-    font-size: .76rem;
-  }
-  .pdf-calendar-weekdays span {
-    font-size: .56rem;
-  }
-  .pdf-day-spacer,
-  .pdf-day {
-    min-height: 28px;
-    border-radius: 12px;
-    font-size: .78rem;
-  }
-  .modal-presets {
-    grid-template-columns: 1fr;
-  }
-  .modal-footer {
-    gap: var(--sp2);
-  }
   .chart-legend { display: grid; grid-template-columns: 1fr; gap: var(--sp2); }
   .range-chip-group {
     display: flex;

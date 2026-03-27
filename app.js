@@ -96,7 +96,6 @@ const DOM = {
   pdfCalendarMonths: () => byId('pdf-calendar-months'),
   btnPdfPrevMonth: () => byId('btn-pdf-prev-month'),
   btnPdfNextMonth: () => byId('btn-pdf-next-month'),
-  btnPdfClear: () => byId('btn-pdf-clear'),
   tableBody: () => byId('table-body'),
   pageInfo: () => byId('page-info'),
   pageNumbers: () => byId('page-numbers'),
@@ -374,6 +373,31 @@ function formatPdfDisplayDate(value) {
   const date = value instanceof Date ? value : parseDateInputValue(value);
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return 'Any day';
   return DATE_FORMATTERS.pdfDisplay.format(date);
+}
+
+function formatEntryCount(count) {
+  return `${count} ${count === 1 ? 'entry' : 'entries'}`;
+}
+
+function getFriendlyPdfRangeLabel(fromVal, toVal) {
+  if (!fromVal || !toVal) return 'All matching records';
+
+  const { preset } = state.exportRange;
+  if (preset === 'today' && fromVal === toVal) return 'Today';
+
+  const presetDates = getDateValuesForPreset(preset);
+  if (preset === '7d' && fromVal === presetDates.fromValue && toVal === presetDates.toValue) {
+    return 'Last 7 days';
+  }
+  if (preset === '30d' && fromVal === presetDates.fromValue && toVal === presetDates.toValue) {
+    return 'Last 30 days';
+  }
+
+  if (fromVal === toVal) {
+    return formatPdfDisplayDate(fromVal);
+  }
+
+  return `${formatPdfDisplayDate(fromVal)} → ${formatPdfDisplayDate(toVal)}`;
 }
 
 function getCalendarWeekdayIndex(date) {
@@ -894,6 +918,29 @@ function getSelectedRangeLabel() {
   if (state.exportRange.preset === '7d') return 'Last 7 days';
   if (state.exportRange.preset === '30d') return 'Last 30 days';
   return 'All records';
+}
+
+function getDateValuesForPreset(preset) {
+  const today = new Date();
+  const toValue = formatDateInputValue(today);
+
+  if (preset === 'today') {
+    return { fromValue: toValue, toValue };
+  }
+
+  if (preset === '7d') {
+    const from = new Date(today);
+    from.setDate(from.getDate() - 6);
+    return { fromValue: formatDateInputValue(from), toValue };
+  }
+
+  if (preset === '30d') {
+    const from = new Date(today);
+    from.setDate(from.getDate() - 29);
+    return { fromValue: formatDateInputValue(from), toValue };
+  }
+
+  return { fromValue: '', toValue: '' };
 }
 
 function matchesSelectedRange(row) {
@@ -1868,14 +1915,6 @@ function bindEvents() {
     btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
   });
 
-  DOM.btnPdfClear()?.addEventListener('click', () => {
-    syncPdfPresetButtons(null);
-    setPdfModalDates('', '', {
-      anchorValue: formatDateInputValue(new Date()),
-      pendingAnchor: '',
-    });
-  });
-  
   byId('btn-scroll-table')?.addEventListener('click', () => {
     byId('section-table')?.scrollIntoView({ behavior: 'smooth' });
   });
@@ -2153,17 +2192,21 @@ function cancelPdfCalendarDrag() {
 }
 
 function openPdfModal() {
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const preset = ['all', 'today', '7d', '30d'].includes(state.exportRange.preset)
+    ? state.exportRange.preset
+    : 'all';
+  const { fromValue, toValue } = getDateValuesForPreset(preset);
 
   resetPdfDragState();
   setPdfModalDates(
-    formatDateInputValue(sevenDaysAgo),
-    formatDateInputValue(today),
-    { anchorValue: formatDateInputValue(sevenDaysAgo), pendingAnchor: '' }
+    fromValue,
+    toValue,
+    {
+      anchorValue: fromValue || toValue || formatDateInputValue(new Date()),
+      pendingAnchor: '',
+    }
   );
-  syncPdfPresetButtons('7d');
+  syncPdfPresetButtons(preset);
 
   const modal = byId('modal-pdf');
   if (modal) modal.hidden = false;
@@ -2188,7 +2231,7 @@ function getPdfModalSelection() {
   if (!fromVal || !toVal) {
     return {
       rows: sortRowsByTime(baseRows, 'asc'),
-      rangeLabel: 'All matching records',
+      rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
     };
   }
 
@@ -2197,7 +2240,7 @@ function getPdfModalSelection() {
   if (!from || !to) {
     return {
       rows: sortRowsByTime(baseRows, 'asc'),
-      rangeLabel: 'All matching records',
+      rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
     };
   }
 
@@ -2205,7 +2248,7 @@ function getPdfModalSelection() {
 
   return {
     rows: sortRowsByTime(baseRows.filter(row => row.time >= from && row.time <= to), 'asc'),
-    rangeLabel: fromVal === toVal ? fromVal : `${fromVal} → ${toVal}`,
+    rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
   };
 }
 
@@ -2222,7 +2265,7 @@ function updatePdfModalSummary() {
   const toVal   = DOM.pdfDateTo()?.value;
 
   if (!fromVal || !toVal) {
-    summary.textContent = `All records — ${rows.length} entries`;
+    summary.textContent = `All matching records — ${formatEntryCount(rows.length)}`;
     return;
   }
 
@@ -2231,7 +2274,7 @@ function updatePdfModalSummary() {
     return;
   }
 
-  summary.textContent = `${rangeLabel} — ${rows.length} entries`;
+  summary.textContent = `${rangeLabel} — ${formatEntryCount(rows.length)}`;
 }
 
 function syncPdfPresetButtons(activePreset) {
