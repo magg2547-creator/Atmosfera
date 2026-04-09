@@ -1701,16 +1701,32 @@ function exportAllCSV() {
     ...rows.map(row => getExportRowValues(row).map(toCsvCell).join(',')),
   ];
 
-  const blobUrl = URL.createObjectURL(
-    new Blob([csvRows.join('\n')], { type: 'text/csv' })
-  );
-  const link = document.createElement('a');
-  link.href = blobUrl;
-  link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(blobUrl);
+  const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const blobUrl = URL.createObjectURL(csvBlob);
+
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    // iOS Safari: เปิดใน new tab → กด Share → Save to Files
+    const win = window.open(blobUrl, '_blank');
+    if (!win) {
+      // popup blocked — fallback to link download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  } else {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  }
 
   showToast(`Exported ${rows.length} records`);
 }
