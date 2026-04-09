@@ -1171,7 +1171,7 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .hero-eyebrow  { margin-bottom: var(--sp3); }
   .hero-meta     { padding: var(--sp4); border-radius: calc(var(--r-xl) - 1rem); }
   .hero-date     { font-size: .7rem; }
-  nav            { position: static; top: auto; margin-top: 8px; margin-bottom: var(--sp6);
+  nav            { position: relative; z-index: 250; top: auto; margin-top: 8px; margin-bottom: var(--sp6);
                    border-radius: calc(var(--r-xl) - .9rem); padding: var(--sp3) var(--sp4);
                    overflow: visible; }
   /* Single-row compact nav on mobile */
