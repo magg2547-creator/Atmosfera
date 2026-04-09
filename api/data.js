@@ -79,7 +79,10 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // ── 6. ส่งข้อมูลกลับ frontend ───────────────────────────
+    // ── 6. ส่งข้อมูลกลับ frontend + Cache ──────────────────
+    //  Cache ที่ Vercel CDN 5 นาที → request ซ้ำในช่วงนี้ไม่ต้องเรียก
+    //  Google Script อีก ลด latency และ cold start ได้มาก
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     return res.status(200).json(data);
 
   } catch (error) {
