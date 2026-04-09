@@ -174,7 +174,7 @@ nav {
   border: 1px solid rgba(255,255,255,.5);
   border-radius: var(--r-lg);
   box-shadow: 0 8px 24px rgba(60,90,100,.18);
-  min-width: 160px; overflow: hidden; z-index: 300;
+  min-width: 160px; overflow: visible; z-index: 500;
 }
 .nav-export-item {
   display: flex; align-items: center; gap: var(--sp3);
@@ -1119,19 +1119,20 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .hero-meta     { padding: var(--sp4); border-radius: calc(var(--r-xl) - 1rem); }
   .hero-date     { font-size: .7rem; }
   nav            { position: static; top: auto; margin-top: 8px; margin-bottom: var(--sp6);
-                   border-radius: calc(var(--r-xl) - .9rem); padding: var(--sp3) var(--sp4); }
+                   border-radius: calc(var(--r-xl) - .9rem); padding: var(--sp3) var(--sp4);
+                   overflow: visible; }
   /* Single-row compact nav on mobile */
   .nav-actions   { display: flex; flex-direction: row; align-items: center;
                    flex-wrap: nowrap; gap: var(--sp2); overflow: visible; }
   .nav-actions > * { width: auto; flex-shrink: 0; }
-  /* ซ่อน "Hourly snapshot" chip — เหลือ "Next refresh" ไว้ */
-  .nav-actions > .chip:first-child { display: none; }
+  /* ซ่อน "Hourly snapshot" chip */
+  .nav-actions > .chip:first-child { display: none !important; }
   /* Next refresh chip — ยืดเต็มที่ที่เหลือ ตัดด้วย ellipsis */
-  #last-update-chip { display: flex; flex: 1 1 0; min-width: 0; overflow: hidden; }
+  #last-update-chip { display: flex !important; flex: 1 1 0; min-width: 0; overflow: hidden; }
   #status-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   /* ซ่อน Export desktop buttons บน mobile */
   #btn-export-pdf,
-  #btn-export    { display: none; }
+  #btn-export    { display: none !important; }
   /* แสดง dropdown ⋮ */
   .nav-export-dropdown { display: block; position: relative; flex-shrink: 0; }
 
