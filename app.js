@@ -204,6 +204,18 @@ const fmt = (value, digits = 1) => {
   return Number.isFinite(number) ? number.toFixed(digits) : '-';
 };
 
+// ── XSS Protection ────────────────────────────────────────────
+// ใช้กับข้อมูลที่มาจาก API ก่อน render ลง innerHTML
+// ป้องกัน HTML injection จากค่าที่ผิดปกติใน Google Sheet
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function setHTML(element, html) {
   if (element) element.innerHTML = html;
 }
@@ -1151,18 +1163,18 @@ function renderTable() {
     tbody.innerHTML = pageRows.map(row => `
       <tr>
         <td class="td-time" data-label="Recorded">
-          <span class="td-date">${formatTableDate(row.time)}</span>
-          <span class="td-clock">${formatTableClock(row.time)}</span>
+          <span class="td-date">${escapeHtml(formatTableDate(row.time))}</span>
+          <span class="td-clock">${escapeHtml(formatTableClock(row.time))}</span>
         </td>
-        <td class="td-value" data-label="PM2.5">${fmt(row.pm25)}</td>
-        <td class="td-value" data-label="PM10">${fmt(row.pm10)}</td>
-        <td class="td-value" data-label="Temperature">${fmt(row.temp)}</td>
-        <td class="td-value" data-label="Humidity">${row.hum}</td>
-        <td class="td-value" data-label="CO2">${row.co2}</td>
-        <td class="td-value" data-label="Voltage">${fmt(row.volt)}</td>
-        <td class="td-value" data-label="Current">${fmt(row.curr, 2)}</td>
-        <td class="td-value" data-label="Power">${fmt(row.pwr, 1)}</td>
-        <td class="td-value" data-label="Energy">${fmt(row.energy, 2)}</td>
+        <td class="td-value" data-label="PM2.5">${escapeHtml(fmt(row.pm25))}</td>
+        <td class="td-value" data-label="PM10">${escapeHtml(fmt(row.pm10))}</td>
+        <td class="td-value" data-label="Temperature">${escapeHtml(fmt(row.temp))}</td>
+        <td class="td-value" data-label="Humidity">${escapeHtml(String(row.hum))}</td>
+        <td class="td-value" data-label="CO2">${escapeHtml(String(row.co2))}</td>
+        <td class="td-value" data-label="Voltage">${escapeHtml(fmt(row.volt))}</td>
+        <td class="td-value" data-label="Current">${escapeHtml(fmt(row.curr, 2))}</td>
+        <td class="td-value" data-label="Power">${escapeHtml(fmt(row.pwr, 1))}</td>
+        <td class="td-value" data-label="Energy">${escapeHtml(fmt(row.energy, 2))}</td>
       </tr>
     `).join('');
   }
@@ -1278,11 +1290,13 @@ function initCharts() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(90,106,114,.07)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(90,106,114,.07)' },
           ticks: { maxTicksLimit: 6 },
         },
         y: {
-          grid: { color: 'rgba(90,106,114,.07)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(90,106,114,.07)' },
           ticks: { maxTicksLimit: 5 },
           min: 0,
           title: {
@@ -1336,11 +1350,13 @@ function initCharts() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(0,0,0,.04)' },
           ticks: { maxTicksLimit: 5 },
         },
         y: {
-          grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(0,0,0,.04)' },
           ticks: { maxTicksLimit: 5 },
           title: {
             display: true,
@@ -1416,11 +1432,13 @@ function initCharts() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(0,0,0,.04)' },
           ticks: { maxTicksLimit: 6 },
         },
         y: {
-          grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+          border: { display: false },
+          grid: { color: 'rgba(0,0,0,.04)' },
           ticks: { maxTicksLimit: 5 },
         },
       },
