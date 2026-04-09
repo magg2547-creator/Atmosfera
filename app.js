@@ -1835,7 +1835,20 @@ function exportPDF(rows, options = {}) {
     y += rowHeight;
   });
 
-  doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
+  // Mobile (iOS Safari) ไม่รองรับ doc.save() → เปิดใน new tab แทน
+  // User กด Share → Save to Files ได้เองจาก Safari
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    const blobUrl = URL.createObjectURL(doc.output('blob'));
+    const win = window.open(blobUrl, '_blank');
+    if (!win) {
+      // popup blocked — fallback to download
+      doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  } else {
+    doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
+  }
   showToast(`Exported ${exportRows.length} records to PDF`);
 }
 
