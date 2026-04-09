@@ -1683,6 +1683,18 @@ function getExportRowValues(row) {
   ];
 }
 
+// ── Download helper (non-iOS) ────────────────────────────────
+function fallbackDownload(blob, filename) {
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href  = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 function exportAllCSV() {
   const rows = getExportRows();
   if (rows.length === 0) {
@@ -1701,33 +1713,23 @@ function exportAllCSV() {
     ...rows.map(row => getExportRowValues(row).map(toCsvCell).join(',')),
   ];
 
-  const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const blobUrl = URL.createObjectURL(csvBlob);
+  const filename = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
+  const csvBlob  = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
 
+  // iOS Safari: ใช้ Web Share API (แชร์ไฟล์พร้อมชื่อถูกต้อง)
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) {
-    // iOS Safari: เปิดใน new tab → กด Share → Save to Files
-    const win = window.open(blobUrl, '_blank');
-    if (!win) {
-      // popup blocked — fallback to link download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  if (isMobile && navigator.share && navigator.canShare) {
+    const csvFile = new File([csvBlob], filename, { type: 'text/csv' });
+    if (navigator.canShare({ files: [csvFile] })) {
+      navigator.share({ files: [csvFile], title: 'Atmosfera Export' })
+        .catch(() => fallbackDownload(csvBlob, filename));
+      showToast(`Exported ${rows.length} records`);
+      return;
     }
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-  } else {
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
   }
 
+  // Desktop / Android: download ปกติ
+  fallbackDownload(csvBlob, filename);
   showToast(`Exported ${rows.length} records`);
 }
 
@@ -1851,20 +1853,23 @@ function exportPDF(rows, options = {}) {
     y += rowHeight;
   });
 
-  // Mobile (iOS Safari) ไม่รองรับ doc.save() → เปิดใน new tab แทน
-  // User กด Share → Save to Files ได้เองจาก Safari
+  const pdfFilename = `atmosfera_${formatDateInputValue(new Date())}.pdf`;
+  const pdfBlob     = doc.output('blob');
+
+  // iOS: ใช้ Web Share API — share sheet พร้อมชื่อไฟล์ถูกต้อง
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) {
-    const blobUrl = URL.createObjectURL(doc.output('blob'));
-    const win = window.open(blobUrl, '_blank');
-    if (!win) {
-      // popup blocked — fallback to download
-      doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
+  if (isMobile && navigator.share && navigator.canShare) {
+    const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+    if (navigator.canShare({ files: [pdfFile] })) {
+      navigator.share({ files: [pdfFile], title: 'Atmosfera Report' })
+        .catch(() => fallbackDownload(pdfBlob, pdfFilename));
+      showToast(`Exported ${exportRows.length} records to PDF`);
+      return;
     }
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-  } else {
-    doc.save(`atmosfera_${formatDateInputValue(new Date())}.pdf`);
   }
+
+  // Desktop: download ปกติ (jsPDF)
+  doc.save(pdfFilename);
   showToast(`Exported ${exportRows.length} records to PDF`);
 }
 
