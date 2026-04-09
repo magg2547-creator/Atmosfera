@@ -1869,7 +1869,8 @@ function bindEvents() {
   });
   byId('btn-export-pdf-mobile')?.addEventListener('click', () => {
     exportMenu?.setAttribute('hidden', '');
-    openPdfModal();
+    // Mobile: export ทันทีไม่ต้องเลือก date range (UX ที่ดีกว่า)
+    exportPDF(state.rows, { rangeLabel: 'All records' });
   });
   byId('btn-export-csv-mobile')?.addEventListener('click', () => {
     exportMenu?.setAttribute('hidden', '');
