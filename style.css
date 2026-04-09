@@ -1114,15 +1114,19 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
     text-overflow: ellipsis;
   }
   nav            { padding: var(--sp3) var(--sp4); }
-  .nav-actions   { display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; gap: var(--sp2); }
-  .nav-actions > * { width: auto; }
+  .nav-actions   { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--sp2); }
+  .nav-actions > * { width: auto; flex: 0 0 auto; }
+  /* ซ่อนแค่ info chips ที่ไม่จำเป็นบน mobile */
+  .nav-actions > .chip:first-child,
+  #last-update-chip { display: none; }
+  /* ปุ่ม Export + Refresh ยังคงอยู่ */
+  #btn-refresh,
   #btn-export-pdf,
-  #btn-export     { display: none; /* ซ่อนบน mobile — ใช้ปุ่ม Export ในหน้าตารางแทน */ }
-  #btn-refresh    {
-    width: auto;
-    flex: 0 0 auto;
-    padding-inline: var(--sp3);
+  #btn-export {
+    flex: 1 1 auto;
     justify-content: center;
+    padding-inline: var(--sp3);
+    font-size: .75rem;
   }
   .section-action { width: 100%; text-align: left; }
   .range-summary  { border-radius: var(--r-lg); }
