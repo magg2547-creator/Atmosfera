@@ -1118,33 +1118,18 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .hero-eyebrow  { margin-bottom: var(--sp3); }
   .hero-meta     { padding: var(--sp4); border-radius: calc(var(--r-xl) - 1rem); }
   .hero-date     { font-size: .7rem; }
-  nav            { position: static; top: auto; margin-top: 8px; margin-bottom: var(--sp6); border-radius: calc(var(--r-xl) - .9rem); }
-  .nav-actions   { display: flex; flex-direction: column; align-items: stretch; }
-  .nav-actions > * { width: 100%; }
-  .nav-actions > .chip:first-child {
-    justify-content: center;
-  }
-  #last-update-chip {
-    width: 100%;
-    flex: 1 1 auto;
-    min-width: 0;
-    justify-content: center;
-    overflow: hidden;
-  }
-  #status-last {
-    width: auto;
-    max-width: calc(100% - 21px); /* หักความกว้าง icon 13px + gap 8px */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  nav            { padding: var(--sp3) var(--sp4); }
-  .nav-actions   { display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; gap: var(--sp2); overflow: hidden; }
-  /* คืน chip กลับมาแต่เล็กลง */
-  .nav-actions > .chip:first-child { display: flex; }
+  nav            { position: static; top: auto; margin-top: 8px; margin-bottom: var(--sp6);
+                   border-radius: calc(var(--r-xl) - .9rem); padding: var(--sp3) var(--sp4); }
+  /* Single-row compact nav on mobile */
+  .nav-actions   { display: flex; flex-direction: row; align-items: center;
+                   flex-wrap: nowrap; gap: var(--sp2); overflow: visible; }
+  .nav-actions > * { width: auto; flex-shrink: 0; }
+  /* ซ่อน "Hourly snapshot" chip — เหลือ "Next refresh" ไว้ */
+  .nav-actions > .chip:first-child { display: none; }
+  /* Next refresh chip — ยืดเต็มที่ที่เหลือ ตัดด้วย ellipsis */
   #last-update-chip { display: flex; flex: 1 1 0; min-width: 0; overflow: hidden; }
   #status-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-  /* ซ่อน Export desktop บน mobile */
+  /* ซ่อน Export desktop buttons บน mobile */
   #btn-export-pdf,
   #btn-export    { display: none; }
   /* แสดง dropdown ⋮ */
