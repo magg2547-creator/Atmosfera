@@ -163,6 +163,31 @@ nav {
 .nav-actions .chip,
 .nav-actions .btn-primary { max-width: 100%; }
 
+/* ── Mobile Export Dropdown ────────────────────────────────── */
+.nav-export-dropdown { display: none; position: relative; }
+.nav-export-toggle   { padding: var(--sp2) var(--sp3) !important; }
+.nav-export-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: rgba(240,246,248,.96);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: var(--r-lg);
+  box-shadow: 0 8px 24px rgba(60,90,100,.18);
+  min-width: 160px; overflow: hidden; z-index: 300;
+}
+.nav-export-item {
+  display: flex; align-items: center; gap: var(--sp3);
+  width: 100%; padding: var(--sp3) var(--sp4);
+  background: none; border: none; cursor: pointer;
+  font-size: .82rem; font-weight: 500; color: var(--on-surface);
+  text-align: left; transition: background .15s;
+}
+.nav-export-item:hover  { background: rgba(90,120,130,.08); }
+.nav-export-item + .nav-export-item {
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
 .chip {
   font-size: .75rem; font-weight: 500; color: var(--on-surface);
   background: linear-gradient(135deg, rgba(255,255,255,.34), rgba(233,242,245,.18)); border-radius: var(--r-full);
@@ -1114,20 +1139,17 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
     text-overflow: ellipsis;
   }
   nav            { padding: var(--sp3) var(--sp4); }
-  .nav-actions   { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--sp2); }
-  .nav-actions > * { width: auto; flex: 0 0 auto; }
-  /* ซ่อนแค่ info chips ที่ไม่จำเป็นบน mobile */
-  .nav-actions > .chip:first-child,
-  #last-update-chip { display: none; }
-  /* ปุ่ม Export + Refresh ยังคงอยู่ */
-  #btn-refresh,
+  .nav-actions   { display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; gap: var(--sp2); overflow: hidden; }
+  /* คืน chip กลับมาแต่เล็กลง */
+  .nav-actions > .chip:first-child { display: flex; }
+  #last-update-chip { display: flex; flex: 1 1 0; min-width: 0; overflow: hidden; }
+  #status-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  /* ซ่อน Export desktop บน mobile */
   #btn-export-pdf,
-  #btn-export {
-    flex: 1 1 auto;
-    justify-content: center;
-    padding-inline: var(--sp3);
-    font-size: .75rem;
-  }
+  #btn-export    { display: none; }
+  /* แสดง dropdown ⋮ */
+  .nav-export-dropdown { display: block; position: relative; flex-shrink: 0; }
+
   .section-action { width: 100%; text-align: left; }
   .range-summary  { border-radius: var(--r-lg); }
   .table-card     { padding: var(--sp6) var(--sp4); }

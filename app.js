@@ -1858,6 +1858,29 @@ function bindEvents() {
   byId('btn-export-pdf')?.addEventListener('click', openPdfModal);
   byId('btn-export')?.addEventListener('click', exportAllCSV);
 
+  // ── Mobile Export Dropdown ───────────────────────────────
+  const exportToggle = byId('btn-export-toggle');
+  const exportMenu   = byId('nav-export-menu');
+  exportToggle?.addEventListener('click', e => {
+    e.stopPropagation();
+    const isHidden = exportMenu?.hasAttribute('hidden');
+    if (isHidden) exportMenu?.removeAttribute('hidden');
+    else exportMenu?.setAttribute('hidden', '');
+  });
+  byId('btn-export-pdf-mobile')?.addEventListener('click', () => {
+    exportMenu?.setAttribute('hidden', '');
+    openPdfModal();
+  });
+  byId('btn-export-csv-mobile')?.addEventListener('click', () => {
+    exportMenu?.setAttribute('hidden', '');
+    exportAllCSV();
+  });
+  document.addEventListener('click', e => {
+    if (!byId('nav-export-dropdown')?.contains(e.target)) {
+      exportMenu?.setAttribute('hidden', '');
+    }
+  });
+
   // modal
   byId('btn-modal-close')?.addEventListener('click', closePdfModal);
   byId('btn-modal-cancel')?.addEventListener('click', closePdfModal);
