@@ -1,8 +1,13 @@
 {
-  "crons": [
+  "headers": [
     {
-      "path": "/api/data",
-      "schedule": "*/10 * * * *"
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=300, stale-while-revalidate=600"
+        }
+      ]
     }
   ]
 }
