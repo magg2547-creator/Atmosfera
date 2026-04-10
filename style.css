@@ -1,4 +1,4 @@
-﻿
+
 /* ─────────────────────────────────────────
    DESIGN SYSTEM — ATMOSFERA
    Source of truth: DESIGN.md
@@ -1146,14 +1146,19 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .pdf-calendar-month:last-child { padding-inline: 0; }
 }
 @media (max-width: 640px) {
-  .metric-grid   { grid-template-columns: 1fr; }
-  .hero-title    { font-size: clamp(2rem, 11vw, 2.8rem); }
-  .hero-clock    { font-size: clamp(2.15rem, 12vw, 2.85rem); }
-  .aqi-score     { font-size: clamp(3rem, 18vw, 4.8rem); }
+  /* 2×2 grid — much better than single column */
+  .metric-grid   { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp3); }
+  .hero-title    { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+  .hero-clock    { font-size: clamp(2rem, 11vw, 2.6rem); }
+  /* AQI banner: score left, gauges right on tablet phones */
+  .aqi-banner    { grid-template-columns: auto 1fr; gap: var(--sp6); padding: var(--sp6); }
+  .aqi-score     { font-size: clamp(3rem, 16vw, 4.5rem); }
   .aqi-gauge-label { flex-direction: column; align-items: flex-start; }
   .aqi-gauge-value { text-align: left; }
-  .energy-card.featured { gap: var(--sp6); }
-  #val-co2       { font-size: clamp(2.2rem, 13vw, 2.9rem) !important; }
+  .aqi-mini-stats { flex-direction: row; justify-content: flex-start; gap: var(--sp6); }
+  .aqi-mini-stat  { text-align: left; }
+  .energy-card.featured { gap: var(--sp4); }
+  #val-co2       { font-size: clamp(2rem, 12vw, 2.8rem) !important; }
   #chart-donut   { width: min(100%, 180px) !important; }
   .range-summary,
   .page-info     { width: 100%; }
@@ -1220,54 +1225,52 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 @media (max-width: 480px) {
   .shell        { padding: 0 var(--sp3) var(--sp8); }
   nav           { padding: var(--sp3); }
-  .metric-grid  { grid-template-columns: 1fr; }
-  .status-strip { grid-template-columns: 1fr; }
-  .hero         { padding: var(--sp6) 0 var(--sp4); gap: var(--sp3); }
-  .hero-title   { font-size: clamp(1.85rem, 10vw, 2.35rem); }
+  /* Keep 2×2 on very small screens too — 1-col is too tall */
+  .metric-grid  { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
+  .status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
+  .hero         { padding: var(--sp4) 0 var(--sp3); gap: var(--sp3); }
+  .hero-title   { font-size: clamp(1.6rem, 9vw, 2.1rem); }
   .hero-title br { display: none; }
   .hero-meta    { padding: var(--sp3); }
-  .aqi-banner,
+  /* AQI banner: single column stacked on very small */
+  .aqi-banner   { grid-template-columns: 1fr; gap: var(--sp4); padding: var(--sp4); }
+  .aqi-score    { font-size: clamp(2.6rem, 15vw, 3.8rem); }
+  .aqi-mini-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp2);
+    width: 100%;
+  }
+  .aqi-mini-stat  { text-align: left; }
+  .aqi-mini-value { font-size: 1.15rem; }
+  .aqi-gauges   { display: none; }  /* hide gauge bars to save space */
   .chart-card,
   .table-card,
   .metric-card,
   .energy-card,
   .insight-panel { padding: var(--sp4); border-radius: calc(var(--r-xl) - .8rem); }
-  .aqi-mini-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--sp3);
-    width: 100%;
-  }
-  .aqi-mini-stat { text-align: left; }
-  .aqi-mini-value { font-size: 1.2rem; }
+  .metric-value { font-size: clamp(1.5rem, 8vw, 2rem); }
   .chart-header,
   .pdf-calendar-header { gap: var(--sp2); }
   .chart-legend { display: grid; grid-template-columns: 1fr; gap: var(--sp2); }
   .range-chip-group {
-    display: flex;
-    flex-wrap: nowrap;
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
+    display: flex; flex-wrap: nowrap; width: 100%;
+    overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
   }
   .range-chip-group::-webkit-scrollbar { display: none; }
-  .range-chip-group .range-chip {
-    width: auto;
-    flex: 0 0 auto;
-    justify-content: center;
-  }
+  .range-chip-group .range-chip { width: auto; flex: 0 0 auto; justify-content: center; }
   .mobile-sort-controls { grid-template-columns: 1fr; }
   .records-table tbody tr { grid-template-columns: 1fr; }
-  .records-table tbody td {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
+  .records-table tbody td { flex-direction: column; align-items: flex-start; gap: 4px; }
   .records-table tbody td::before { white-space: normal; }
   .table-pagination { gap: var(--sp2); }
-  .page-info { font-size: .72rem; }
-  .chart-wrap   { height: 180px; }
+  .page-info    { font-size: .72rem; }
+  .chart-wrap   { height: 200px; }
+  /* Section headers more compact */
+  .section-header { margin-bottom: var(--sp3); }
+  #val-co2      { font-size: clamp(1.5rem, 8vw, 2rem) !important; }
+  /* Energy cards: 2-col */
+  .energy-cards { gap: var(--sp2); }
 }
 
 /* ── ERROR BANNER ── */
