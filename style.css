@@ -1185,9 +1185,9 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .nav-actions > * { width: auto; flex-shrink: 0; }
   /* ซ่อน "Hourly snapshot" chip */
   .nav-actions > .chip:first-child { display: none !important; }
-  /* Next refresh chip — ยืดเต็มที่ที่เหลือ ตัดด้วย ellipsis */
-  #last-update-chip { display: flex !important; flex: 1 1 0; min-width: 0; overflow: hidden; }
-  #status-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  /* Next refresh chip — แสดงเวลาเต็มๆ */
+  #last-update-chip { display: flex !important; flex: 1 1 auto; min-width: 0; }
+  #status-last { white-space: nowrap; }
   /* ซ่อน Export desktop buttons บน mobile */
   #btn-export-pdf,
   #btn-export    { display: none !important; }
