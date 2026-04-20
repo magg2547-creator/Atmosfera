@@ -1243,6 +1243,14 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
     box-shadow: 0 5px 10px rgba(66,102,111,.2), inset 0 1px 0 rgba(255,255,255,.18);
     filter: saturate(.95);
   }
+  .nav-export-toggle:focus,
+  .nav-export-toggle:focus-visible,
+  .nav-export-toggle[aria-expanded='true'] {
+    background: linear-gradient(135deg, rgba(76,110,119,.94), rgba(45,116,112,.88));
+    color: var(--on-primary);
+    border-color: rgba(255,255,255,.35);
+    outline: none;
+  }
   .nav-export-toggle svg { flex-shrink: 0; }
   .nav-export-menu {
     right: 0;

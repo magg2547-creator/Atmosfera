@@ -1912,6 +1912,9 @@ function bindEvents() {
   const closeExportMenu = () => {
     exportMenu?.setAttribute('hidden', '');
     exportToggle?.setAttribute('aria-expanded', 'false');
+    if (document.activeElement === exportToggle) {
+      exportToggle.blur();
+    }
   };
 
   exportToggle?.addEventListener('click', e => {
