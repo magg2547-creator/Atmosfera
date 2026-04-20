@@ -604,12 +604,12 @@ function handleFetchError(error, options = {}) {
 
   const isFirstLoad = state.rows.length === 0;
   const message = isFirstLoad
-    ? `Could not load data — ${error.message}`
-    : `Refresh failed — showing last known data (${error.message})`;
+    ? `Load failed: ${error.message}`
+    : `Refresh failed. Showing saved data.`;
 
   showErrorBanner(message);
   if (trigger !== 'auto' || state.fetch.lastErrorMessage !== error.message) {
-    showToast(`Warning: ${error.message}`);
+    showToast(`Sync issue: ${error.message}`);
   }
   state.fetch.lastErrorMessage = error.message;
   console.error('[Atmosfera] fetch error:', error);
@@ -784,7 +784,7 @@ async function fetchSheet(options = {}) {
     updateCharts();
 
     setText(DOM.lastUpdate(), 'Just now');
-    showToast(`Loaded ${normalizedRows.length} records`);
+    showToast(`Synced ${normalizedRows.length} records`);
 
     startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
@@ -1721,7 +1721,7 @@ function fallbackDownload(blob, filename) {
 function exportAllCSV() {
   const rows = getExportRows();
   if (rows.length === 0) {
-    showToast('No data to export');
+    showToast('Nothing to export');
     return;
   }
 
@@ -1746,14 +1746,14 @@ function exportAllCSV() {
     if (navigator.canShare({ files: [csvFile] })) {
       navigator.share({ files: [csvFile], title: 'Atmosfera Export' })
         .catch(() => fallbackDownload(csvBlob, filename));
-      showToast(`Exported ${rows.length} records`);
+      showToast(`CSV ready (${rows.length} rows)`);
       return;
     }
   }
 
   // Desktop / Android แบบเก่า: download ปกติ
   fallbackDownload(csvBlob, filename);
-  showToast(`Exported ${rows.length} records`);
+  showToast(`CSV ready (${rows.length} rows)`);
 }
 
 function exportPDF(rows, options = {}) {
@@ -1764,13 +1764,13 @@ function exportPDF(rows, options = {}) {
 
   const exportRows = sortRowsByTime(rows, 'asc');
   if (exportRows.length === 0) {
-    showToast('No data to export for the selected range');
+    showToast('No records in selected range');
     return;
   }
 
   const jsPDFCtor = window.jspdf?.jsPDF;
   if (!jsPDFCtor) {
-    showToast('PDF export is unavailable');
+    showToast('PDF export unavailable');
     return;
   }
 
@@ -1886,14 +1886,14 @@ function exportPDF(rows, options = {}) {
     if (navigator.canShare({ files: [pdfFile] })) {
       navigator.share({ files: [pdfFile], title: 'Atmosfera Report' })
         .catch(() => fallbackDownload(pdfBlob, pdfFilename));
-      showToast(`Exported ${exportRows.length} records to PDF`);
+      showToast(`PDF ready (${exportRows.length} rows)`);
       return;
     }
   }
 
   // Desktop: download ปกติ (jsPDF handle)
   doc.save(pdfFilename);
-  showToast(`Exported ${exportRows.length} records to PDF`);
+  showToast(`PDF ready (${exportRows.length} rows)`);
 }
 
 function tickClock() {
