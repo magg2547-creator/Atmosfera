@@ -1683,16 +1683,30 @@ function getExportRowValues(row) {
   ];
 }
 
-// ── Download helper (non-iOS) ────────────────────────────────
+// ── Download helper (All Platforms) ──────────────────────────
 function fallbackDownload(blob, filename) {
-  const url  = URL.createObjectURL(blob);
+  // IE11 / Legacy Edge fallback
+  if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+    window.navigator.msSaveOrOpenBlob(blob, filename);
+    return;
+  }
+  
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href  = url;
+  link.style.display = 'none';
+  link.href = url;
   link.download = filename;
+  link.rel = 'noopener'; // Security & browser context bypass
+  
   document.body.appendChild(link);
+  // Optional: Check if we need to force octet-stream for stubborn browsers
   link.click();
-  document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  
+  // Cleanup
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 200);
 }
 
 function exportAllCSV() {
@@ -1714,7 +1728,7 @@ function exportAllCSV() {
   ];
 
   const filename = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
-  const csvBlob  = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const csvBlob  = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
 
   // iOS Safari: ต้องใช้ Web Share API เพื่อให้ชื่อไฟล์และนามสกุลถูกต้อง
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
