@@ -1561,9 +1561,9 @@ function getRefreshCountdownText(remainingSeconds) {
       const seconds = remainingSeconds % 60;
 
       if (hours > 0) {
-        return `Next refresh in ${hours}h ${minutes}m`;
+        return `Refresh in ${hours}h ${minutes}m`;
       }
-      return `Next refresh in ${minutes}:${String(seconds).padStart(2, '0')}`;
+      return `Refresh in ${minutes}:${String(seconds).padStart(2, '0')}`;
     }
 
     case 'empty':
