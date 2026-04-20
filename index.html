@@ -52,14 +52,25 @@
 
     <!-- Mobile Export Dropdown -->
     <div class="nav-export-dropdown" id="nav-export-dropdown">
-      <button class="chip nav-export-toggle" id="btn-export-toggle" aria-label="Export options">
+      <button
+        class="chip nav-export-toggle"
+        id="btn-export-toggle"
+        aria-label="Export options"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="nav-export-menu"
+      >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-          <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-          <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+          <path d="M12 3v12m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
+        Export
       </button>
       <div class="nav-export-menu" id="nav-export-menu" hidden>
+        <div class="nav-export-header">
+          <span>Export data</span>
+          <small>Choose file format</small>
+        </div>
         <button class="nav-export-item" id="btn-export-pdf-mobile">
           <div class="export-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">

@@ -1909,24 +1909,36 @@ function bindEvents() {
   // ── Mobile Export Dropdown ───────────────────────────────
   const exportToggle = byId('btn-export-toggle');
   const exportMenu   = byId('nav-export-menu');
+  const closeExportMenu = () => {
+    exportMenu?.setAttribute('hidden', '');
+    exportToggle?.setAttribute('aria-expanded', 'false');
+  };
+
   exportToggle?.addEventListener('click', e => {
     e.stopPropagation();
     const isHidden = exportMenu?.hasAttribute('hidden');
-    if (isHidden) exportMenu?.removeAttribute('hidden');
-    else exportMenu?.setAttribute('hidden', '');
+    if (isHidden) {
+      exportMenu?.removeAttribute('hidden');
+      exportToggle?.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    closeExportMenu();
   });
   byId('btn-export-pdf-mobile')?.addEventListener('click', () => {
-    exportMenu?.setAttribute('hidden', '');
+    closeExportMenu();
     openPdfModal();
   });
   byId('btn-export-csv-mobile')?.addEventListener('click', () => {
-    exportMenu?.setAttribute('hidden', '');
+    closeExportMenu();
     exportAllCSV();
   });
   document.addEventListener('click', e => {
     if (!byId('nav-export-dropdown')?.contains(e.target)) {
-      exportMenu?.setAttribute('hidden', '');
+      closeExportMenu();
     }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeExportMenu();
   });
 
   // modal
