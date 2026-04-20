@@ -1715,7 +1715,20 @@ function exportAllCSV() {
 
   const filename = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
   const csvBlob  = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  // All platforms: download ปกติ
+
+  // iOS Safari: ต้องใช้ Web Share API เพื่อให้ชื่อไฟล์และนามสกุลถูกต้อง
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && navigator.share && navigator.canShare) {
+    const csvFile = new File([csvBlob], filename, { type: 'text/csv' });
+    if (navigator.canShare({ files: [csvFile] })) {
+      navigator.share({ files: [csvFile], title: 'Atmosfera Export' })
+        .catch(() => fallbackDownload(csvBlob, filename));
+      showToast(`Exported ${rows.length} records`);
+      return;
+    }
+  }
+
+  // Desktop / Android แบบเก่า: download ปกติ
   fallbackDownload(csvBlob, filename);
   showToast(`Exported ${rows.length} records`);
 }
@@ -1842,7 +1855,20 @@ function exportPDF(rows, options = {}) {
 
   const pdfFilename = `atmosfera_${formatDateInputValue(new Date())}.pdf`;
   const pdfBlob     = doc.output('blob');
-  // All platforms: download ปกติ (jsPDF handle)
+
+  // iOS: ใช้ Web Share API เพื่อรักษาชื่อไฟล์ .pdf ไม่ให้กลายเป็นไฟล์ประหลาด (Limitation ของ iOS)
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && navigator.share && navigator.canShare) {
+    const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+    if (navigator.canShare({ files: [pdfFile] })) {
+      navigator.share({ files: [pdfFile], title: 'Atmosfera Report' })
+        .catch(() => fallbackDownload(pdfBlob, pdfFilename));
+      showToast(`Exported ${exportRows.length} records to PDF`);
+      return;
+    }
+  }
+
+  // Desktop: download ปกติ (jsPDF handle)
   doc.save(pdfFilename);
   showToast(`Exported ${exportRows.length} records to PDF`);
 }
