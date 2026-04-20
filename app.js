@@ -1685,6 +1685,9 @@ function getExportRowValues(row) {
 
 // ── Download helper (All Platforms) ──────────────────────────
 function fallbackDownload(blob, filename) {
+  // #region agent log
+  fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H3',location:'app.js:fallbackDownload:start',message:'fallback download invoked',data:{filename,blobType:blob?.type||'',blobSize:blob?.size||0,hasMsSave:Boolean(window.navigator&&window.navigator.msSaveOrOpenBlob)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   // IE11 / Legacy Edge fallback
   if (window.navigator && window.navigator.msSaveOrOpenBlob) {
     window.navigator.msSaveOrOpenBlob(blob, filename);
@@ -1732,9 +1735,16 @@ function exportAllCSV() {
 
   // iOS Safari: ต้องใช้ Web Share API เพื่อให้ชื่อไฟล์และนามสกุลถูกต้อง
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // #region agent log
+  fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H1',location:'app.js:exportAllCSV:decision',message:'csv export decision point',data:{rows:rows.length,filename,blobType:csvBlob.type,isMobile,hasShare:Boolean(navigator.share),hasCanShare:Boolean(navigator.canShare)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   if (isMobile && navigator.share && navigator.canShare) {
     const csvFile = new File([csvBlob], filename, { type: 'text/csv' });
-    if (navigator.canShare({ files: [csvFile] })) {
+    // #region agent log
+    const csvCanShareFiles = navigator.canShare({ files: [csvFile] });
+    fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H2',location:'app.js:exportAllCSV:canShare',message:'csv canShare result',data:{canShareFiles:csvCanShareFiles,fileType:csvFile.type,fileName:csvFile.name},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (csvCanShareFiles) {
       navigator.share({ files: [csvFile], title: 'Atmosfera Export' })
         .catch(() => fallbackDownload(csvBlob, filename));
       showToast(`Exported ${rows.length} records`);
@@ -1872,9 +1882,16 @@ function exportPDF(rows, options = {}) {
 
   // iOS: ใช้ Web Share API เพื่อรักษาชื่อไฟล์ .pdf ไม่ให้กลายเป็นไฟล์ประหลาด (Limitation ของ iOS)
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // #region agent log
+  fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H1',location:'app.js:exportPDF:decision',message:'pdf export decision point',data:{rows:exportRows.length,pdfFilename,pdfBlobType:pdfBlob?.type||'',isMobile,hasShare:Boolean(navigator.share),hasCanShare:Boolean(navigator.canShare)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   if (isMobile && navigator.share && navigator.canShare) {
     const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-    if (navigator.canShare({ files: [pdfFile] })) {
+    // #region agent log
+    const pdfCanShareFiles = navigator.canShare({ files: [pdfFile] });
+    fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H2',location:'app.js:exportPDF:canShare',message:'pdf canShare result',data:{canShareFiles:pdfCanShareFiles,fileType:pdfFile.type,fileName:pdfFile.name},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (pdfCanShareFiles) {
       navigator.share({ files: [pdfFile], title: 'Atmosfera Report' })
         .catch(() => fallbackDownload(pdfBlob, pdfFilename));
       showToast(`Exported ${exportRows.length} records to PDF`);
@@ -1883,6 +1900,9 @@ function exportPDF(rows, options = {}) {
   }
 
   // Desktop: download ปกติ (jsPDF handle)
+  // #region agent log
+  fetch('http://127.0.0.1:7604/ingest/54a35d70-e28e-4092-9d96-6343a75f5ddc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1c2d79'},body:JSON.stringify({sessionId:'1c2d79',runId:'pre-fix',hypothesisId:'H4',location:'app.js:exportPDF:docsave',message:'pdf export uses doc.save path',data:{pdfFilename,pdfBlobType:pdfBlob?.type||''},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   doc.save(pdfFilename);
   showToast(`Exported ${exportRows.length} records to PDF`);
 }
