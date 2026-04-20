@@ -1702,11 +1702,11 @@ function fallbackDownload(blob, filename) {
   // Optional: Check if we need to force octet-stream for stubborn browsers
   link.click();
   
-  // Cleanup
+  // Cleanup — Give the browser enough time to process the download
   setTimeout(() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, 200);
+  }, 10000);
 }
 
 function exportAllCSV() {
