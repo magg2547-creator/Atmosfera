@@ -17,12 +17,12 @@
 
 <!-- NAVIGATION -->
 <nav>
-  <div class="nav-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <button class="nav-logo" id="btn-scroll-top" type="button" aria-label="Scroll to top">
     <div class="nav-logo-mark">
       <img src="/favicon.png" alt="Atmosfera logo" width="28" height="28" style="border-radius: 8px; display: block;">
     </div>
     <span class="nav-brand">Atmos<span>fera</span></span>
-  </div>
+  </button>
 
   <div class="nav-actions">
     <div class="chip">
@@ -329,6 +329,7 @@
           <button class="range-chip" type="button" data-range-preset="30d">30 Days</button>
         </div>
       </div>
+      <label class="visually-hidden" for="table-search">Search records</label>
       <input class="table-search" type="text" id="table-search" placeholder="Search records...">
       <div class="mobile-table-toolbar">
         <label class="mobile-sort-label" for="table-sort-select">Sort records</label>
@@ -398,9 +399,9 @@
 
 <!-- PDF EXPORT MODAL -->
 <div class="modal-overlay" id="modal-pdf" hidden>
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pdf-modal-title">
     <div class="modal-header">
-      <div class="modal-title">Export PDF</div>
+      <div class="modal-title" id="pdf-modal-title">Export PDF</div>
       <button class="modal-close" id="btn-modal-close" aria-label="Close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

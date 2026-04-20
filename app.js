@@ -178,6 +178,15 @@ const DATE_FORMATTERS = Object.freeze({
 });
 
 const charts = { aq: null, co2: null, energy: null, donut: null };
+let lastFocusedElementBeforeModal = null;
+const MODAL_FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
 const DONUT_LABEL_PLUGIN = {
   id: 'donutLabel',
@@ -1902,6 +1911,9 @@ function manualRefresh() {
 }
 
 function bindEvents() {
+  byId('btn-scroll-top')?.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
   byId('btn-export-pdf')?.addEventListener('click', openPdfModal);
   byId('btn-export')?.addEventListener('click', exportAllCSV);
@@ -2325,18 +2337,66 @@ function openPdfModal() {
   syncPdfPresetButtons(preset);
 
   const modal = byId('modal-pdf');
-  if (modal) modal.hidden = false;
+  if (modal) {
+    modal.hidden = false;
+    lastFocusedElementBeforeModal = document.activeElement;
+    modal.addEventListener('keydown', handlePdfModalKeydown);
+
+    const firstFocusable = modal.querySelector(MODAL_FOCUSABLE_SELECTOR);
+    if (firstFocusable instanceof HTMLElement) firstFocusable.focus();
+  }
 
   document.body.style.overflow = 'hidden'; // ล็อก scroll
 }
 
 function closePdfModal() {
   const modal = byId('modal-pdf');
-  if (modal) modal.hidden = true;
+  if (modal) {
+    modal.hidden = true;
+    modal.removeEventListener('keydown', handlePdfModalKeydown);
+  }
 
   resetPdfDragState();
   resetPdfPendingAnchor();
   document.body.style.overflow = ''; // คืน scroll
+
+  if (lastFocusedElementBeforeModal instanceof HTMLElement) {
+    lastFocusedElementBeforeModal.focus();
+  }
+  lastFocusedElementBeforeModal = null;
+}
+
+function handlePdfModalKeydown(event) {
+  const modal = byId('modal-pdf');
+  if (!modal || modal.hidden) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closePdfModal();
+    return;
+  }
+
+  if (event.key !== 'Tab') return;
+
+  const focusableElements = [...modal.querySelectorAll(MODAL_FOCUSABLE_SELECTOR)]
+    .filter(element => !element.hasAttribute('hidden'));
+
+  if (focusableElements.length === 0) return;
+
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+  const activeElement = document.activeElement;
+
+  if (event.shiftKey && activeElement === firstElement) {
+    event.preventDefault();
+    if (lastElement instanceof HTMLElement) lastElement.focus();
+    return;
+  }
+
+  if (!event.shiftKey && activeElement === lastElement) {
+    event.preventDefault();
+    if (firstElement instanceof HTMLElement) firstElement.focus();
+  }
 }
 
 function getPdfModalSelection() {
