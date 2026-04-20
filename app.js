@@ -1715,20 +1715,7 @@ function exportAllCSV() {
 
   const filename = `atmosfera_export_${formatDateInputValue(new Date())}.csv`;
   const csvBlob  = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-
-  // iOS Safari: ใช้ Web Share API (แชร์ไฟล์พร้อมชื่อถูกต้อง)
-  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile && navigator.share && navigator.canShare) {
-    const csvFile = new File([csvBlob], filename, { type: 'text/csv' });
-    if (navigator.canShare({ files: [csvFile] })) {
-      navigator.share({ files: [csvFile], title: 'Atmosfera Export' })
-        .catch(() => fallbackDownload(csvBlob, filename));
-      showToast(`Exported ${rows.length} records`);
-      return;
-    }
-  }
-
-  // Desktop / Android: download ปกติ
+  // All platforms: download ปกติ
   fallbackDownload(csvBlob, filename);
   showToast(`Exported ${rows.length} records`);
 }
@@ -1855,20 +1842,7 @@ function exportPDF(rows, options = {}) {
 
   const pdfFilename = `atmosfera_${formatDateInputValue(new Date())}.pdf`;
   const pdfBlob     = doc.output('blob');
-
-  // iOS: ใช้ Web Share API — share sheet พร้อมชื่อไฟล์ถูกต้อง
-  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile && navigator.share && navigator.canShare) {
-    const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-    if (navigator.canShare({ files: [pdfFile] })) {
-      navigator.share({ files: [pdfFile], title: 'Atmosfera Report' })
-        .catch(() => fallbackDownload(pdfBlob, pdfFilename));
-      showToast(`Exported ${exportRows.length} records to PDF`);
-      return;
-    }
-  }
-
-  // Desktop: download ปกติ (jsPDF)
+  // All platforms: download ปกติ (jsPDF handle)
   doc.save(pdfFilename);
   showToast(`Exported ${exportRows.length} records to PDF`);
 }
@@ -1903,8 +1877,7 @@ function bindEvents() {
   });
   byId('btn-export-pdf-mobile')?.addEventListener('click', () => {
     exportMenu?.setAttribute('hidden', '');
-    // Mobile: export ทันทีไม่ต้องเลือก date range (UX ที่ดีกว่า)
-    exportPDF(state.rows, { rangeLabel: 'All records' });
+    openPdfModal();
   });
   byId('btn-export-csv-mobile')?.addEventListener('click', () => {
     exportMenu?.setAttribute('hidden', '');
