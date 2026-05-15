@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atmosfera - Air &amp; Energy Monitor</title>
+<script>
+  document.documentElement.classList.add('is-booting');
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  window.scrollTo(0, 0);
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/src/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+</head>
+<body>
+<div class="shell is-starting">
+
+<!-- NAVIGATION -->
+<nav>
+  <button class="nav-logo" id="btn-scroll-top" type="button" aria-label="Scroll to top">
+    <div class="nav-logo-mark">
+      <img src="/assets/favicon.png" alt="Atmosfera logo" width="28" height="28" style="border-radius: 8px; display: block;">
+    </div>
+    <span class="nav-brand-wrap">
+      <span class="nav-brand">Atmos<span>fera</span></span>
+      <span class="nav-version">Air &amp; Energy Monitor</span>
+    </span>
+  </button>
+
+  <div class="nav-status" id="nav-status">
+    <div class="live-indicator"></div>
+    <span id="nav-status-text">System Status: Live</span>
+  </div>
+
+  <div class="nav-menu" aria-label="Dashboard sections">
+    <a class="nav-link active" href="#main-content">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>Overview</span>
+    </a>
+    <a class="nav-link" href="#air-quality">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 17h16M6 17V9m6 8V5m6 12v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 9l4-4 4 4 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Air Quality</span>
+    </a>
+    <a class="nav-link" href="#energy-metrics">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2L4 13h8l-1 9 9-12h-8l1-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>CO2 &amp; Energy</span>
+    </a>
+    <a class="nav-link" href="#trend-analysis">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Trends</span>
+    </a>
+    <a class="nav-link" href="#section-table">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      <span>Records</span>
+    </a>
+  </div>
+
+  <div class="nav-actions">
+    <div class="chip">
+      <div class="live-indicator"></div>
+      <span>Hourly snapshot</span>
+    </div>
+
+    <div class="chip" id="last-update-chip" role="status" aria-live="polite" aria-atomic="true">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+      <span id="status-last">-</span>
+    </div>
+
+    <button class="chip" id="btn-refresh">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Refresh
+    </button>
+
+    <button class="btn-primary" id="btn-export-pdf">Export PDF</button>
+    <button class="btn-primary" id="btn-export">Export CSV</button>
+
+    <!-- Mobile Export Dropdown -->
+    <div class="nav-export-dropdown" id="nav-export-dropdown">
+      <button
+        class="chip nav-export-toggle"
+        id="btn-export-toggle"
+        aria-label="Export options"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="nav-export-menu"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v12m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Export
+      </button>
+      <div class="nav-export-menu" id="nav-export-menu" hidden>
+        <div class="nav-export-header">
+          <span>Export data</span>
+          <small>Choose file format</small>
+        </div>
+        <button class="nav-export-item" id="btn-export-pdf-mobile">
+          <div class="export-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="9" y1="17" x2="15" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="export-label">
+            <span>Export PDF</span>
+            <span>สรุปข้อมูลในรูปแบบ PDF</span>
+          </div>
+        </button>
+        <button class="nav-export-item" id="btn-export-csv-mobile">
+          <div class="export-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="export-label">
+            <span>Export CSV</span>
+            <span>ดาวน์โหลดข้อมูล Spreadsheet</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+  <div class="error-banner offline-card" id="error-banner" role="alert" aria-live="assertive" hidden>
+  <div class="offline-icon" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 19h.01M8.2 15.2a5.4 5.4 0 0 1 7.6 0M5 12a9.9 9.9 0 0 1 14 0M2.5 8.7a14.2 14.2 0 0 1 19 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="offline-copy">
+    <div class="offline-kicker">Offline state</div>
+    <strong id="error-banner-title">Sensor data is temporarily offline</strong>
+    <span id="error-banner-text">Atmosfera could not reach the data source. The dashboard will retry automatically.</span>
+    <small id="error-banner-meta">Auto retry is active.</small>
+  </div>
+  <button class="error-retry" id="btn-error-retry">Try again</button>
+</div>
+  <div class="empty-state" id="empty-state" role="status" aria-live="polite" aria-atomic="true" hidden>
+  <div class="empty-state-icon" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="empty-state-copy">
+    <h3>Waiting for sensor data</h3>
+    <p>No readings have arrived yet. Atmosfera will keep checking the data source automatically.</p>
+  </div>
+</div>
+
+<main id="main-content">
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-eyebrow">Environmental Intelligence</div>
+    <h1 class="hero-title">Air Quality &amp;<br><span class="accent">Energy Monitor</span></h1>
+  </div>
+  <div class="hero-meta">
+    <div class="hero-date" id="hero-date">-</div>
+    <div class="hero-clock" id="hero-clock">-</div>
+  </div>
+</section>
+
+<!-- AQI BANNER -->
+<div class="aqi-banner">
+  <div>
+    <div class="aqi-label">Air Quality Index</div>
+    <div class="aqi-score" id="aqi-score">-</div>
+    <div class="aqi-status-pill">
+      <div class="aqi-status-dot" id="aqi-dot"></div>
+      <span id="aqi-status-text">Waiting for data...</span>
+    </div>
+  </div>
+  <div class="aqi-gauges">
+    <div class="aqi-gauge-row">
+      <div class="aqi-gauge-label"><span>PM 2.5</span><span class="aqi-gauge-value" id="banner-pm25">- &micro;g/m&sup3;</span></div>
+      <div class="aqi-gauge-track"><div class="aqi-gauge-fill" id="gauge-pm25" style="width:0%"></div></div>
+    </div>
+    <div class="aqi-gauge-row">
+      <div class="aqi-gauge-label"><span>PM 10</span><span class="aqi-gauge-value" id="banner-pm10">- &micro;g/m&sup3;</span></div>
+      <div class="aqi-gauge-track"><div class="aqi-gauge-fill" id="gauge-pm10" style="width:0%"></div></div>
+    </div>
+    <div class="aqi-gauge-row">
+      <div class="aqi-gauge-label"><span>CO2</span><span class="aqi-gauge-value" id="banner-co2">- ppm</span></div>
+      <div class="aqi-gauge-track"><div class="aqi-gauge-fill" id="gauge-co2" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="aqi-mini-stats">
+    <div class="aqi-mini-stat"><div class="aqi-mini-label">Temperature</div><div class="aqi-mini-value" id="mini-temp">-<span class="aqi-mini-unit">C</span></div></div>
+    <div class="aqi-mini-stat"><div class="aqi-mini-label">Humidity</div><div class="aqi-mini-value" id="mini-hum">-<span class="aqi-mini-unit">%</span></div></div>
+    <div class="aqi-mini-stat"><div class="aqi-mini-label">Power Draw</div><div class="aqi-mini-value" id="mini-pwr">-<span class="aqi-mini-unit">W</span></div></div>
+  </div>
+</div>
+
+<!-- AIR QUALITY METRIC CARDS -->
+<div class="section-header" id="air-quality">
+  <h2 class="section-title">Air Quality Metrics</h2>
+</div>
+<div class="metric-grid">
+  <div class="metric-card" style="--card-accent:#466370;--card-icon-bg:rgba(70,99,112,.08)">
+    <div class="skeleton-overlay" id="sk-pm25"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12h10M3 6h14M3 18h6" stroke="#466370" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="18" r="3" stroke="#466370" stroke-width="1.5"/></svg></div>
+    <div class="metric-name">PM 2.5</div>
+    <div class="metric-value" id="val-pm25">-<span class="metric-unit">&micro;g/m&sup3;</span></div>
+    <div class="metric-sub"><span class="delta delta-flat" id="delta-pm25">-</span>vs previous</div>
+  </div>
+  <div class="metric-card" style="--card-accent:#5d5e61;--card-icon-bg:rgba(93,94,97,.08)">
+    <div class="skeleton-overlay" id="sk-pm10"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12h14M3 6h18M3 18h8" stroke="#5d5e61" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="metric-name">PM 10</div>
+    <div class="metric-value" id="val-pm10">-<span class="metric-unit">&micro;g/m&sup3;</span></div>
+    <div class="metric-sub"><span class="delta delta-flat" id="delta-pm10">-</span>vs previous</div>
+  </div>
+  <div class="metric-card" style="--card-accent:#b45309;--card-icon-bg:rgba(180,83,9,.07)">
+    <div class="skeleton-overlay" id="sk-temp"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 017 7c0 3-1.5 5.5-3.5 7V20H8.5v-4C6.5 14.5 5 12 5 9a7 7 0 017-7z" stroke="#b45309" stroke-width="1.5"/><path d="M9 22h6" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="metric-name">Temperature</div>
+    <div class="metric-value" id="val-temp">-<span class="metric-unit">C</span></div>
+    <div class="metric-sub"><span class="delta delta-flat" id="delta-temp">-</span>vs previous</div>
+  </div>
+  <div class="metric-card" style="--card-accent:#006977;--card-icon-bg:rgba(0,105,119,.08)">
+    <div class="skeleton-overlay" id="sk-hum"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+    <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" stroke="#006977" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+    <div class="metric-name">Humidity</div>
+    <div class="metric-value" id="val-hum">-<span class="metric-unit">%</span></div>
+    <div class="metric-sub"><span class="delta delta-flat" id="delta-hum">-</span>vs previous</div>
+  </div>
+</div>
+
+<!-- CO2 AND ENERGY -->
+<div class="section-header" id="energy-metrics">
+  <h2 class="section-title">CO2 &amp; Energy Metrics</h2>
+</div>
+<div class="energy-section">
+  <div class="energy-cards">
+    <div class="energy-card featured">
+      <div>
+        <div class="metric-icon" style="background:rgba(255,255,255,.12);margin-bottom:var(--sp6)"><svg viewBox="0 0 24 24" fill="none"><text x="1" y="18" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,.85)">CO2</text></svg></div>
+        <div class="metric-name">Carbon Dioxide</div>
+        <div class="metric-value" id="val-co2" style="font-size:3rem">-<span class="metric-unit">ppm</span></div>
+        <div class="metric-sub"><span class="delta" id="delta-co2" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.7)">-</span>ambient level</div>
+      </div>
+      <div class="donut-wrap"><canvas id="chart-donut" width="220" height="220"
+  role="img"
+  aria-label="Donut chart showing current CO2 level as a percentage of maximum range"></canvas></div>
+    </div>
+    <div class="energy-card" style="--card-accent:#466370;--card-icon-bg:rgba(70,99,112,.08)">
+      <div class="skeleton-overlay" id="sk-volt"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+      <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#466370" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="metric-name">Voltage</div>
+      <div class="metric-value" id="val-volt">-<span class="metric-unit">V</span></div>
+      <div class="metric-sub"><span class="delta delta-flat" id="delta-volt">-</span>nominal range</div>
+    </div>
+    <div class="energy-card" style="--card-accent:#5d5e61;--card-icon-bg:rgba(93,94,97,.08)">
+      <div class="skeleton-overlay" id="sk-curr"><div class="skeleton-block" style="width:36px;height:36px;border-radius:var(--r-md);margin-bottom:var(--sp6)"></div><div class="skeleton-block" style="height:10px;width:60%;margin-bottom:var(--sp3)"></div><div class="skeleton-block" style="height:38px;width:75%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:8px;width:50%"></div></div>
+      <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="#5d5e61" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="metric-name">Current</div>
+      <div class="metric-value" id="val-curr">-<span class="metric-unit">A</span></div>
+      <div class="metric-sub"><span class="delta delta-flat" id="delta-curr">-</span>load reading</div>
+    </div>
+  </div>
+  <div class="insight-panel">
+    <div class="skeleton-overlay flex" id="sk-insight">
+      <div class="skeleton-block" style="height:14px;width:50%"></div>
+      <div><div class="skeleton-block" style="height:26px;width:55%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:3px;width:100%;border-radius:var(--r-full)"></div></div>
+      <div class="skeleton-block" style="height:1px;width:100%"></div>
+      <div><div class="skeleton-block" style="height:26px;width:55%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:3px;width:100%;border-radius:var(--r-full)"></div></div>
+      <div class="skeleton-block" style="height:1px;width:100%"></div>
+      <div><div class="skeleton-block" style="height:26px;width:55%;margin-bottom:var(--sp2)"></div><div class="skeleton-block" style="height:3px;width:100%;border-radius:var(--r-full)"></div></div>
+    </div>
+    <div class="insight-title">System Insights</div>
+    <div class="insight-item">
+      <div class="insight-label">Active Power</div>
+      <div class="insight-value" id="insight-pwr">- <span style="font-size:.85rem;font-weight:400;opacity:.5">W</span></div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="bar-pwr" style="width:0%;background:linear-gradient(90deg,var(--primary),var(--secondary))"></div></div>
+    </div>
+    <div class="insight-divider"></div>
+    <div class="insight-item">
+      <div class="insight-label">Energy Recorded</div>
+      <div class="insight-value" id="insight-energy">- <span style="font-size:.85rem;font-weight:400;opacity:.5">kWh</span></div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="bar-energy" style="width:0%;background:linear-gradient(90deg,var(--secondary),var(--tertiary))"></div></div>
+    </div>
+    <div class="insight-divider"></div>
+    <div class="insight-item">
+      <div class="insight-label">Power Factor</div>
+      <div class="insight-value" id="insight-pf">- <span style="font-size:.85rem;font-weight:400;opacity:.5">PF</span></div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="bar-pf" style="width:0%;background:linear-gradient(90deg,var(--tertiary),var(--tertiary-fixed-dim))"></div></div>
+    </div>
+    <div class="insight-divider"></div>
+    <div class="insight-item">
+      <div class="insight-label">Efficiency Rating</div>
+      <div class="insight-value" id="insight-eff" style="color:var(--tertiary)">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- TREND CHARTS -->
+<div class="section-header" id="trend-analysis">
+  <h2 class="section-title">Trend Analysis</h2>
+  <div class="chart-tabs">
+    <button class="chart-tab active" data-range="1h">1H</button>
+    <button class="chart-tab" data-range="6h">6H</button>
+    <button class="chart-tab" data-range="24h">24H</button>
+  </div>
+</div>
+<div class="chart-section">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div><div class="chart-title">Air Quality Over Time</div><div class="chart-subtitle">PM2.5 and PM10 concentration</div></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#466370"></div>PM 2.5</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a9da8"></div>PM 10</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(93,94,97,.3)"></div>WHO Limit</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-aq"
+  role="img"
+  aria-label="Line chart showing PM2.5 and PM10 air quality over time"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div><div class="chart-title">CO2 Level</div><div class="chart-subtitle">ppm over time</div></div></div>
+    <div class="chart-wrap"><canvas id="chart-co2"
+  role="img"
+  aria-label="Line chart showing CO2 concentration in ppm over time"></canvas></div>
+  </div>
+</div>
+<div class="section-header" style="margin-top:var(--sp4)"><h2 class="section-title">Energy Consumption</h2></div>
+<div class="chart-card" style="margin-bottom:var(--sp8);opacity:0;transform:translateY(16px);animation:fadeUp .6s ease forwards .35s">
+  <div class="chart-header">
+    <div><div class="chart-title">Voltage, Current &amp; Power</div><div class="chart-subtitle">Electrical parameters - historical window</div></div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#5d5e61"></div>Voltage (V)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#466370"></div>Current (A)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#006977"></div>Power (W)</div>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:200px"><canvas id="chart-energy"
+  role="img"
+  aria-label="Line chart showing voltage, current, and power consumption over time"></canvas></div>
+</div>
+
+<!-- RECENT RECORDS -->
+<div class="section-header" id="section-table">
+  <h2 class="section-title">Recent Records</h2>
+</div>
+<div class="table-section">
+  <div class="table-card">
+    <div class="table-controls">
+      <div class="range-toolbar">
+        <div class="range-chip-group">
+          <button class="range-chip active" type="button" data-range-preset="all">All</button>
+          <button class="range-chip" type="button" data-range-preset="today">Today</button>
+          <button class="range-chip" type="button" data-range-preset="7d">7 Days</button>
+          <button class="range-chip" type="button" data-range-preset="30d">30 Days</button>
+        </div>
+      </div>
+      <label class="visually-hidden" for="table-search">Search records</label>
+      <input class="table-search" type="text" id="table-search" placeholder="Search records...">
+      <div class="mobile-table-toolbar">
+        <label class="mobile-sort-label" for="table-sort-select">Sort records</label>
+        <div class="mobile-sort-controls">
+          <select class="mobile-sort-select" id="table-sort-select">
+            <option value="time">Recorded</option>
+            <option value="pm25">PM2.5</option>
+            <option value="pm10">PM10</option>
+            <option value="temp">Temperature</option>
+            <option value="hum">Humidity</option>
+            <option value="co2">CO2</option>
+            <option value="volt">Voltage</option>
+            <option value="curr">Current</option>
+            <option value="pwr">Power</option>
+            <option value="energy">Energy</option>
+          </select>
+          <button class="mobile-sort-direction" id="table-sort-direction" type="button">Newest first</button>
+        </div>
+      </div>
+    </div>
+    <div class="range-summary" id="range-summary">Date range: All records</div>
+    <div class="table-scroll">
+      <table class="records-table">
+        <colgroup>
+          <col class="col-time">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-metric">
+          <col class="col-electric">
+          <col class="col-electric">
+          <col class="col-electric">
+          <col class="col-energy">
+        </colgroup>
+        <thead><tr>
+          <th data-sort="time" id="th-time"><span class="th-shell"><span class="th-copy"><span class="th-label">Recorded</span><span class="th-meta">Date and time</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm25" id="th-pm25"><span class="th-shell"><span class="th-copy"><span class="th-label">PM2.5</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm10" id="th-pm10"><span class="th-shell"><span class="th-copy"><span class="th-label">PM10</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="temp" id="th-temp"><span class="th-shell"><span class="th-copy"><span class="th-label">Temperature</span><span class="th-meta">&deg;C</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="hum" id="th-hum"><span class="th-shell"><span class="th-copy"><span class="th-label">Humidity</span><span class="th-meta">%</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="co2" id="th-co2"><span class="th-shell"><span class="th-copy"><span class="th-label">CO2</span><span class="th-meta">ppm</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="volt" id="th-volt"><span class="th-shell"><span class="th-copy"><span class="th-label">Voltage</span><span class="th-meta">V</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="curr" id="th-curr"><span class="th-shell"><span class="th-copy"><span class="th-label">Current</span><span class="th-meta">A</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pwr" id="th-pwr"><span class="th-shell"><span class="th-copy"><span class="th-label">Power</span><span class="th-meta">W</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="energy" id="th-energy"><span class="th-shell"><span class="th-copy"><span class="th-label">Energy</span><span class="th-meta">kWh</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="table-pagination">
+      <div class="page-info" id="page-info">-</div>
+      <div class="page-buttons">
+        <button class="page-btn" id="btn-prev" disabled>&lt;- Prev</button>
+        <div id="page-numbers"></div>
+        <button class="page-btn" id="btn-next">Next -&gt;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div class="footer-brand">Atmosfera - Environmental Intelligence</div>
+  <div class="footer-note" id="footer-note">IoT Monitoring Station - Data via Google Apps Script</div>
+</footer>
+</div>
+
+<!-- PDF EXPORT MODAL -->
+<div class="modal-overlay" id="modal-pdf" hidden>
+  <div class="modal pdf-export-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-modal-title">
+    <div class="modal-header pdf-modal-header">
+      <div>
+        <div class="modal-kicker">Atmosfera Report</div>
+        <div class="modal-title" id="pdf-modal-title">Prepare PDF export</div>
+      </div>
+      <button class="modal-close" id="btn-modal-close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body pdf-modal-body">
+      <div class="pdf-modal-grid">
+        <section class="pdf-builder-panel pdf-range-panel" aria-label="PDF date range">
+          <div class="pdf-panel-heading">
+            <span>Report range</span>
+            <small>Choose the records included in this PDF</small>
+          </div>
+          <div class="pdf-range-shell">
+            <button class="pdf-date-card active" type="button" data-pdf-field="from">
+              <span class="pdf-date-card-label">From</span>
+              <span class="pdf-date-card-value" id="pdf-date-from-display">-</span>
+            </button>
+            <div class="pdf-range-divider" aria-hidden="true">
+              <span></span>
+            </div>
+            <button class="pdf-date-card" type="button" data-pdf-field="to">
+              <span class="pdf-date-card-label">To</span>
+              <span class="pdf-date-card-value" id="pdf-date-to-display">-</span>
+            </button>
+            <input type="hidden" id="pdf-date-from">
+            <input type="hidden" id="pdf-date-to">
+          </div>
+          <div class="modal-presets">
+            <button class="range-chip" type="button" data-pdf-preset="today">Today</button>
+            <button class="range-chip" type="button" data-pdf-preset="7d">Last 7 days</button>
+            <button class="range-chip" type="button" data-pdf-preset="30d">Last 30 days</button>
+            <button class="range-chip" type="button" data-pdf-preset="all">All records</button>
+          </div>
+          <div class="pdf-health-summary" aria-label="Selected range summary">
+            <div class="pdf-health-card">
+              <span>Avg PM2.5</span>
+              <strong id="pdf-health-pm25">—</strong>
+            </div>
+            <div class="pdf-health-card">
+              <span>Max CO2</span>
+              <strong id="pdf-health-co2">—</strong>
+            </div>
+            <div class="pdf-health-card">
+              <span>Total energy</span>
+              <strong id="pdf-health-energy">—</strong>
+            </div>
+          </div>
+        </section>
+        <section class="pdf-builder-panel pdf-calendar-panel" aria-label="PDF calendar">
+          <div class="pdf-calendar-shell">
+            <div class="pdf-calendar-header">
+              <div>
+                <div class="pdf-calendar-title" id="pdf-calendar-title">-</div>
+                <div class="pdf-calendar-subtitle" id="pdf-calendar-subtitle">-</div>
+              </div>
+              <div class="pdf-calendar-nav">
+                <button class="pdf-calendar-nav-btn" type="button" id="btn-pdf-prev-month" aria-label="Previous month">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="pdf-calendar-nav-btn" type="button" id="btn-pdf-next-month" aria-label="Next month">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="pdf-calendar-months" id="pdf-calendar-months"></div>
+          </div>
+        </section>
+      </div>
+      <div class="modal-summary" id="pdf-modal-summary">-</div>
+    </div>
+    <div class="modal-footer pdf-modal-footer">
+      <button class="btn-secondary" id="btn-modal-cancel">Cancel</button>
+      <button class="btn-confirm" id="btn-modal-confirm">Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+  <div class="toast-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <span id="toast-message">Done</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
+<script type="module" src="/src/app.js"></script>
+</body>
+</html>

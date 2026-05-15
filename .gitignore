@@ -1,0 +1,51 @@
+# ─── Credentials & Secrets ───────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ─── Dependencies ────────────────────────────
+node_modules/
+
+# ─── Build Output ────────────────────────────
+.next/
+out/
+dist/
+build/
+
+# ─── OS Files ────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor ──────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Logs ────────────────────────────────────
+*.log
+npm-debug.log*
+
+# Local workspaces and backups
+Atmosfera-main/
+.push-clean/
+.rebase-backup/
+.tmp/
+.claude/
+Air Q/
+Air Q Co2 Power/
+atmosfera/
+Atmosfera dashboard new/
+Atmosfera-New-main/
+Dashbord New/
+gemini linux/
+New folder/
+Project Oak/
+
+# Legacy root static files kept locally after src/ restructure
+/index.html
+/style.css
+/app.js
+/favicon.png
+/QA_SCREENREADER_REGRESSION.md
