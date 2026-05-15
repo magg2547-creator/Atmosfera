@@ -26,6 +26,14 @@ const CONFIG = {
   chartMaxPoints: 60,
 };
 
+/** Unicode text tokens (ASCII-safe source; avoids mojibake in editors) */
+const TXT = Object.freeze({
+  emDash: '\u2014',
+  arrow: '\u2192',
+  ellipsis: '\u2026',
+  microgPerM3: '\u00b5g/m\u00b3',
+});
+
 const state = {
   current: { pm25: 0, pm10: 0, temp: 0, hum: 0, co2: 0, volt: 0, curr: 0, pwr: 0, energy: 0 },
   previous: { pm25: 0, pm10: 0, temp: 0, hum: 0, co2: 0, volt: 0, curr: 0, pwr: 0, energy: 0 },
@@ -286,7 +294,7 @@ function getFriendlyFetchStatus(error, isFirstLoad) {
 }
 
 function formatPdfMetric(value, digits = 1, unit = '') {
-  if (!Number.isFinite(value)) return 'â€”';
+  if (!Number.isFinite(value)) return TXT.emDash;
   return `${fmt(value, digits)}${unit ? ` ${unit}` : ''}`;
 }
 
@@ -308,7 +316,7 @@ function getFriendlyPdfRangeLabel(fromVal, toVal) {
     return formatPdfDisplayDate(fromVal);
   }
 
-  return `${formatPdfDisplayDate(fromVal)} â†’ ${formatPdfDisplayDate(toVal)}`;
+  return `${formatPdfDisplayDate(fromVal)} ${TXT.arrow} ${formatPdfDisplayDate(toVal)}`;
 }
 
 function getCalendarWeekdayIndex(date) {
@@ -510,7 +518,7 @@ function resetDeltaBadge(element) {
   element.className = 'delta delta-flat';
   element.style.background = 'rgba(255,255,255,.12)';
   element.style.color = 'rgba(255,255,255,.7)';
-  element.textContent = 'â€”';
+  element.textContent = TXT.emDash;
 }
 
 function resetMetricState() {
@@ -531,10 +539,10 @@ function resetDashboardBadges() {
 }
 
 function resetInsightPanel() {
-  setHTML(DOM.insightPwr(), `â€” <span style="font-size:.85rem;font-weight:400;opacity:.5">W</span>`);
-  setHTML(DOM.insightEnergy(), `â€” <span style="font-size:.85rem;font-weight:400;opacity:.5">kWh</span>`);
-  setHTML(DOM.insightPf(), `â€” <span style="font-size:.85rem;font-weight:400;opacity:.5">PF</span>`);
-  setText(DOM.insightEff(), 'â€”');
+  setHTML(DOM.insightPwr(), `${TXT.emDash} <span style="font-size:.85rem;font-weight:400;opacity:.5">W</span>`);
+  setHTML(DOM.insightEnergy(), `${TXT.emDash} <span style="font-size:.85rem;font-weight:400;opacity:.5">kWh</span>`);
+  setHTML(DOM.insightPf(), `${TXT.emDash} <span style="font-size:.85rem;font-weight:400;opacity:.5">PF</span>`);
+  setText(DOM.insightEff(), TXT.emDash);
 
   const insightEff = DOM.insightEff();
   if (insightEff) insightEff.style.color = '';
@@ -578,7 +586,7 @@ function renderEmptyState() {
 
   setText(DOM.lastUpdate(), 'No records yet');
 
-  setText(DOM.aqiScore(), 'â€”');
+  setText(DOM.aqiScore(), TXT.emDash);
   setText(DOM.aqiStatusText(), 'No sensor data yet');
 
   const aqiDot = DOM.aqiDot();
@@ -587,25 +595,25 @@ function renderEmptyState() {
     aqiDot.style.boxShadow = 'none';
   }
 
-  setText(DOM.bannerPm25(), 'â€”');
-  setText(DOM.bannerPm10(), 'â€”');
-  setText(DOM.bannerCo2(), 'â€”');
+  setText(DOM.bannerPm25(), TXT.emDash);
+  setText(DOM.bannerPm10(), TXT.emDash);
+  setText(DOM.bannerCo2(), TXT.emDash);
 
   setWidth(DOM.gaugePm25(), 0);
   setWidth(DOM.gaugePm10(), 0);
   setWidth(DOM.gaugeCo2(), 0);
 
-  setText(DOM.miniTemp(), 'â€”');
-  setText(DOM.miniHum(), 'â€”');
-  setText(DOM.miniPwr(), 'â€”');
+  setText(DOM.miniTemp(), TXT.emDash);
+  setText(DOM.miniHum(), TXT.emDash);
+  setText(DOM.miniPwr(), TXT.emDash);
 
-  setHTML(DOM.valPm25(), `â€”<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valPm10(), `â€”<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valTemp(), `â€”<span class="metric-unit">C</span>`);
-  setHTML(DOM.valHum(), `â€”<span class="metric-unit">%</span>`);
-  setHTML(DOM.valCo2(), `â€”<span class="metric-unit">ppm</span>`);
-  setHTML(DOM.valVolt(), `â€”<span class="metric-unit">V</span>`);
-  setHTML(DOM.valCurr(), `â€”<span class="metric-unit">A</span>`);
+  setHTML(DOM.valPm25(), `${TXT.emDash}<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valPm10(), `${TXT.emDash}<span class="metric-unit">&micro;g/m&sup3;</span>`);
+  setHTML(DOM.valTemp(), `${TXT.emDash}<span class="metric-unit">C</span>`);
+  setHTML(DOM.valHum(), `${TXT.emDash}<span class="metric-unit">%</span>`);
+  setHTML(DOM.valCo2(), `${TXT.emDash}<span class="metric-unit">ppm</span>`);
+  setHTML(DOM.valVolt(), `${TXT.emDash}<span class="metric-unit">V</span>`);
+  setHTML(DOM.valCurr(), `${TXT.emDash}<span class="metric-unit">A</span>`);
   resetDashboardBadges();
   resetInsightPanel();
 
@@ -660,6 +668,7 @@ async function fetchSheet(options = {}) {
     renderDashboard();
     recomputeTableView();
     updateCharts();
+    requestAnimationFrame(() => syncActiveNavLink());
 
     setText(DOM.lastUpdate(), 'Just now');
     showToast(`Synced ${normalizedRows.length} records`);
@@ -679,6 +688,7 @@ async function fetchSheet(options = {}) {
       const remaining = Math.max(0, 650 - elapsed);
       window.setTimeout(() => {
         DOM.shell()?.classList.remove('is-starting');
+        syncActiveNavLink();
       }, remaining);
     }
   }
@@ -1045,7 +1055,7 @@ function renderTable() {
   if (state.rows.length === 0) {
     tbody.innerHTML = `
       <tr class="table-empty-state">
-        <td colspan="10" class="no-results">à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ˆà¸²à¸à¸­à¸¸à¸›à¸à¸£à¸“à¹Œ</td>
+        <td colspan="10" class="no-results">No sensor data available yet</td>
       </tr>
     `;
   } else if (pageRows.length === 0) {
@@ -1098,7 +1108,7 @@ function renderTable() {
     if (item === 'ellipsis') {
       const ellipsis = document.createElement('span');
       ellipsis.className = 'page-ellipsis';
-      ellipsis.textContent = 'â€¦';
+      ellipsis.textContent = TXT.ellipsis;
       ellipsis.setAttribute('aria-hidden', 'true');
       fragment.appendChild(ellipsis);
       return;
@@ -1125,6 +1135,16 @@ function initCharts() {
   Chart.register(DONUT_LABEL_PLUGIN);
   Chart.defaults.font.family = "'Instrument Sans', sans-serif";
   Chart.defaults.color = '#5a6a72';
+  Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+
+  const lineChartAnimation = window.matchMedia('(min-width: 961px)').matches
+    ? false
+    : { duration: 200 };
+  const lineDecimation = {
+    enabled: true,
+    algorithm: 'lttb',
+    samples: CONFIG.chartMaxPoints,
+  };
 
   const aqContext = byId('chart-aq').getContext('2d');
   charts.aq = new Chart(aqContext, {
@@ -1141,6 +1161,7 @@ function initCharts() {
           fill: true,
           backgroundColor: makeGradient(aqContext, 'rgba(70,99,112,.15)', 'rgba(70,99,112,0)'),
           tension: 0.45,
+          decimation: lineDecimation,
         },
         {
           label: 'PM 10 (\u00b5g/m\u00b3)',
@@ -1151,6 +1172,7 @@ function initCharts() {
           fill: true,
           backgroundColor: makeGradient(aqContext, 'rgba(74,157,168,.12)', 'rgba(74,157,168,0)'),
           tension: 0.45,
+          decimation: lineDecimation,
         },
         {
           label: 'WHO Limit',
@@ -1202,7 +1224,7 @@ function initCharts() {
           },
         },
       },
-      animation: { duration: 200 },
+      animation: lineChartAnimation,
     },
   });
 
@@ -1221,6 +1243,7 @@ function initCharts() {
           fill: true,
           backgroundColor: makeGradient(co2Context, 'rgba(0,105,119,.15)', 'rgba(0,105,119,0)'),
           tension: 0.45,
+          decimation: lineDecimation,
         },
       ],
     },
@@ -1261,7 +1284,7 @@ function initCharts() {
           },
         },
       },
-      animation: { duration: 200 },
+      animation: lineChartAnimation,
     },
   });
 
@@ -1279,6 +1302,7 @@ function initCharts() {
           pointRadius: 0,
           fill: false,
           tension: 0.4,
+          decimation: lineDecimation,
         },
         {
           label: 'Current (A)',
@@ -1288,6 +1312,7 @@ function initCharts() {
           pointRadius: 0,
           fill: false,
           tension: 0.4,
+          decimation: lineDecimation,
         },
         {
           label: 'Power (W)',
@@ -1298,6 +1323,7 @@ function initCharts() {
           fill: true,
           backgroundColor: makeGradient(energyContext, 'rgba(0,105,119,.08)', 'rgba(0,105,119,0)', 200),
           tension: 0.4,
+          decimation: lineDecimation,
         },
       ],
     },
@@ -1337,7 +1363,7 @@ function initCharts() {
           ticks: { maxTicksLimit: 5 },
         },
       },
-      animation: { duration: 200 },
+      animation: lineChartAnimation,
     },
   });
 
@@ -1401,14 +1427,14 @@ function applyChartRange(rangeKey) {
     charts.aq.data.datasets[1].data = rows.map(row => row.pm10);
     charts.aq.data.datasets[2].data = Array(rows.length).fill(15);
     charts.aq.data.datasets.forEach(applyPointVisibility);
-    charts.aq.update();
+    charts.aq.update('none');
   }
 
   if (charts.co2) {
     charts.co2.data.labels = labels;
     charts.co2.data.datasets[0].data = rows.map(row => row.co2);
     charts.co2.data.datasets.forEach(applyPointVisibility);
-    charts.co2.update();
+    charts.co2.update('none');
   }
 
   if (charts.energy) {
@@ -1417,7 +1443,7 @@ function applyChartRange(rangeKey) {
     charts.energy.data.datasets[1].data = rows.map(row => row.curr);
     charts.energy.data.datasets[2].data = rows.map(row => row.pwr);
     charts.energy.data.datasets.forEach(applyPointVisibility);
-    charts.energy.update();
+    charts.energy.update('none');
   }
 }
 
@@ -1428,7 +1454,7 @@ function updateCharts() {
       if (!chart) return;
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
-      chart.update();
+      chart.update('none');
     });
     return;
   }
@@ -1589,12 +1615,19 @@ const manualRefresh = createManualRefresh({ state, fetchSheet });
 
 function setActiveNavLink(hash) {
   const normalizedHash = hash || '#main-content';
+  let activeLink = null;
+
   document.querySelectorAll('.nav-link').forEach(link => {
     const shouldBeActive = link.getAttribute('href') === normalizedHash;
     if (link.classList.contains('active') !== shouldBeActive) {
       link.classList.toggle('active', shouldBeActive);
     }
+    if (shouldBeActive) activeLink = link;
   });
+
+  if (activeLink && window.matchMedia('(max-width: 960px)').matches) {
+    activeLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
 }
 
 let navSelectionLockHash = null;
@@ -1611,37 +1644,66 @@ function scheduleNavSelectionUnlock(delay = 180) {
   navSelectionUnlockTimer = setTimeout(unlockNavSelection, delay);
 }
 
-function syncActiveNavLink() {
-  if (navSelectionLockHash) {
-    setActiveNavLink(navSelectionLockHash);
-    return;
-  }
-
-  const links = [...document.querySelectorAll('.nav-link[href^="#"]')];
-  const sections = links
+function getNavSections() {
+  return [...document.querySelectorAll('.nav-link[href^="#"]')]
     .map(link => {
       const hash = link.getAttribute('href');
       const target = document.querySelector(hash);
       return target ? { hash, target } : null;
     })
     .filter(Boolean);
+}
 
-  if (!sections.length) return;
+let navSectionMetrics = [];
 
+function measureNavSectionMetrics() {
+  const scrollY = window.scrollY;
+  navSectionMetrics = getNavSections().map(section => ({
+    hash: section.hash,
+    top: section.target.getBoundingClientRect().top + scrollY,
+  }));
+}
+
+function getScrollSpyProbe() {
+  const isDesktopSidebar = window.matchMedia('(min-width: 961px)').matches;
+  return window.scrollY + (isDesktopSidebar ? 48 : 128);
+}
+
+function pickActiveSectionFromScroll() {
+  if (!navSectionMetrics.length) {
+    measureNavSectionMetrics();
+  }
+  if (!navSectionMetrics.length) return;
+
+  const scrollY = window.scrollY;
+  const viewportBottom = scrollY + window.innerHeight;
   const documentHeight = document.documentElement.scrollHeight;
-  const viewportBottom = window.scrollY + window.innerHeight;
 
   if (viewportBottom >= documentHeight - 12) {
-    setActiveNavLink(sections[sections.length - 1].hash);
+    setActiveNavLink(navSectionMetrics[navSectionMetrics.length - 1].hash);
     return;
   }
 
-  const probeY = Math.min(window.innerHeight * 0.34, 260);
-  const activeSection = sections.reduce((current, section) => {
-    return section.target.getBoundingClientRect().top <= probeY ? section : current;
-  }, sections[0]);
+  const probe = getScrollSpyProbe();
+  let activeHash = navSectionMetrics[0].hash;
 
-  setActiveNavLink(activeSection.hash);
+  for (const section of navSectionMetrics) {
+    if (probe >= section.top) {
+      activeHash = section.hash;
+    }
+  }
+
+  setActiveNavLink(activeHash);
+}
+
+function syncActiveNavLink() {
+  if (navSelectionLockHash) {
+    setActiveNavLink(navSelectionLockHash);
+    return;
+  }
+
+  measureNavSectionMetrics();
+  pickActiveSectionFromScroll();
 }
 
 function navigateToSidebarSection(hash) {
@@ -1655,9 +1717,22 @@ function navigateToSidebarSection(hash) {
   scheduleNavSelectionUnlock(900);
 }
 
-function bindSidebarNavigation() {
-  let scrollFrame = null;
+function bindScrollPerf() {
+  const root = document.documentElement;
+  let scrollEndTimer = null;
 
+  window.addEventListener('scroll', () => {
+    if (!root.classList.contains('is-scrolling')) {
+      root.classList.add('is-scrolling');
+    }
+    clearTimeout(scrollEndTimer);
+    scrollEndTimer = setTimeout(() => {
+      root.classList.remove('is-scrolling');
+    }, 140);
+  }, { passive: true });
+}
+
+function bindSidebarNavigation() {
   document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
     link.addEventListener('click', event => {
       const hash = link.getAttribute('href');
@@ -1669,17 +1744,21 @@ function bindSidebarNavigation() {
     });
   });
 
-  window.addEventListener('scroll', () => {
-    if (navSelectionLockHash || scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      window.setTimeout(() => {
-        syncActiveNavLink();
-        scrollFrame = null;
-      }, 80);
+  let scrollSpyFrame = null;
+  const scheduleScrollSpyUpdate = () => {
+    if (navSelectionLockHash || scrollSpyFrame) return;
+    scrollSpyFrame = requestAnimationFrame(() => {
+      pickActiveSectionFromScroll();
+      scrollSpyFrame = null;
     });
-  }, { passive: true });
+  };
 
-  window.addEventListener('resize', syncActiveNavLink);
+  window.addEventListener('scroll', scheduleScrollSpyUpdate, { passive: true });
+  window.addEventListener('resize', () => {
+    measureNavSectionMetrics();
+    syncActiveNavLink();
+  });
+  window.addEventListener('load', syncActiveNavLink);
   syncActiveNavLink();
 }
 
@@ -1687,6 +1766,7 @@ function bindEvents() {
   byId('btn-scroll-top')?.addEventListener('click', () => {
     navigateToSidebarSection('#main-content');
   });
+  bindScrollPerf();
   bindSidebarNavigation();
   DOM.btnRefresh()?.addEventListener('click', manualRefresh);
   byId('btn-export-pdf')?.addEventListener('click', openPdfModal);
@@ -2258,9 +2338,9 @@ function getPdfModalRows() {
 
 function updatePdfHealthSummary(rows) {
   if (!rows.length) {
-    setText(DOM.pdfHealthPm25(), 'â€”');
-    setText(DOM.pdfHealthCo2(), 'â€”');
-    setText(DOM.pdfHealthEnergy(), 'â€”');
+    setText(DOM.pdfHealthPm25(), TXT.emDash);
+    setText(DOM.pdfHealthCo2(), TXT.emDash);
+    setText(DOM.pdfHealthEnergy(), TXT.emDash);
     return;
   }
 
@@ -2268,7 +2348,7 @@ function updatePdfHealthSummary(rows) {
   const maxCo2 = rows.reduce((max, row) => Math.max(max, row.co2), 0);
   const totalEnergy = rows.reduce((sum, row) => sum + row.energy, 0);
 
-  setText(DOM.pdfHealthPm25(), formatPdfMetric(avgPm25, 1, 'Âµg/mÂ³'));
+  setText(DOM.pdfHealthPm25(), formatPdfMetric(avgPm25, 1, TXT.microgPerM3));
   setText(DOM.pdfHealthCo2(), formatPdfMetric(maxCo2, 0, 'ppm'));
   setText(DOM.pdfHealthEnergy(), formatPdfMetric(totalEnergy, 2, 'kWh'));
 }
@@ -2284,7 +2364,7 @@ function updatePdfModalSummary() {
   const toVal = DOM.pdfDateTo()?.value;
 
   if (!fromVal || !toVal) {
-    summary.textContent = `All matching records â€” ${formatEntryCount(rows.length)}`;
+    summary.textContent = `All matching records ${TXT.emDash} ${formatEntryCount(rows.length)}`;
     return;
   }
 
@@ -2293,7 +2373,7 @@ function updatePdfModalSummary() {
     return;
   }
 
-  summary.textContent = `${rangeLabel} â€” ${formatEntryCount(rows.length)}`;
+  summary.textContent = `${rangeLabel} ${TXT.emDash} ${formatEntryCount(rows.length)}`;
 }
 
 function syncPdfPresetButtons(activePreset) {

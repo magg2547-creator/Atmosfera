@@ -47,6 +47,7 @@
   --glass-tint:          rgba(93,130,140,.10);
   --glass-blur:          14px;
   --glass-saturate:      150%;
+  --glass-backdrop:      blur(var(--glass-blur)) saturate(var(--glass-saturate));
 
   --sh-card:  0 10px 24px rgba(63,84,92,.055), inset 0 1px 0 rgba(255,255,255,.68);
   --sh-float: 0 14px 34px rgba(63,84,92,.075), inset 0 1px 0 rgba(255,255,255,.76);
@@ -56,14 +57,42 @@
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: auto; }
 html.is-booting { scroll-behavior: auto !important; }
+html.is-scrolling {
+  --glass-backdrop: none;
+  --glass-bg: rgba(255,255,255,.50);
+  --glass-bg-strong: rgba(255,255,255,.64);
+}
+html.is-scrolling .hero::after {
+  filter: none;
+  opacity: .45;
+}
+html.is-scrolling .chart-wrap,
+html.is-scrolling .donut-wrap {
+  contain: paint;
+  pointer-events: none;
+}
+html.is-scrolling .insight-bar-fill,
+html.is-scrolling .aqi-gauge-fill {
+  transition: none !important;
+}
+html.is-scrolling .live-indicator {
+  animation-play-state: paused;
+}
 #main-content,
 #air-quality,
 #energy-metrics,
 #trend-analysis,
 #section-table {
   scroll-margin-top: 28px;
+}
+#air-quality,
+#energy-metrics,
+#trend-analysis,
+#section-table {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
 }
 body {
   font-family: var(--font-body);
@@ -129,8 +158,8 @@ nav {
   border: 1px solid var(--glass-border);
   border-radius: calc(var(--r-xl) - .4rem);
   box-shadow: var(--sh-card);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
   position: sticky; top: 12px; z-index: 200;
   margin: 12px 0 var(--sp8);
 }
@@ -1409,23 +1438,33 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   .hero-eyebrow  { margin-bottom: var(--sp3); }
   .hero-meta     { padding: var(--sp4); border-radius: calc(var(--r-xl) - 1rem); }
   .hero-date     { font-size: .7rem; }
-  nav            { position: relative; z-index: 250; top: auto; margin-top: 8px; margin-bottom: var(--sp6);
-                   border-radius: calc(var(--r-xl) - .9rem); padding: var(--sp3) var(--sp4);
-                   overflow: visible; }
-  /* Single-row compact nav on mobile */
-  .nav-actions   { display: flex; flex-direction: row; align-items: center;
-                   flex-wrap: nowrap; gap: var(--sp2); overflow: visible; }
+  nav {
+    position: sticky;
+    top: 6px;
+    z-index: 250;
+    margin-top: 8px;
+    margin-bottom: var(--sp6);
+    border-radius: calc(var(--r-xl) - .9rem);
+    padding: var(--sp3) var(--sp4);
+    overflow: visible;
+  }
+  .nav-version { display: none; }
+  .nav-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: var(--sp2);
+    overflow: visible;
+  }
   .nav-actions > * { width: auto; flex-shrink: 0; }
-  /* ซ่อน "Hourly snapshot" chip */
-  .nav-actions > .chip:first-child { display: none !important; }
-  /* Next refresh chip — แสดงเวลาเต็มๆ */
-  #last-update-chip { display: flex !important; flex: 1 1 auto; min-width: 0; }
+  #last-update-chip {
+    display: flex !important;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
   #status-last { white-space: nowrap; }
-  /* ซ่อน Export desktop buttons บน mobile */
-  #btn-export-pdf,
-  #btn-export    { display: none !important; }
-  /* แสดง dropdown ⋮ */
-  .nav-export-dropdown { display: block; position: relative; flex-shrink: 0; }
+  .nav-link { font-size: .76rem; padding: 0 12px; min-height: 36px; }
   .nav-export-toggle {
     min-height: 36px;
     gap: 6px;
@@ -1507,6 +1546,147 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   }
 }
 
+/* Mobile / tablet: drop live backdrop blur (major scroll cost); match desktop solid glass */
+@media (max-width: 960px) {
+  nav,
+  .hero-meta,
+  .aqi-banner,
+  .metric-card,
+  .energy-card,
+  .insight-panel,
+  .chart-card,
+  .table-card,
+  .alert-panel,
+  .chip,
+  .chart-tab,
+  .range-chip,
+  .table-search,
+  .page-btn,
+  .nav-export-toggle {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  nav {
+    background:
+      linear-gradient(180deg, rgba(247,251,252,.94), rgba(216,229,232,.86)),
+      linear-gradient(150deg, rgba(255,255,255,.58), rgba(255,255,255,.22));
+  }
+
+  .hero-meta,
+  .metric-card,
+  .energy-card,
+  .insight-panel,
+  .chart-card,
+  .table-card,
+  .alert-panel {
+    background: linear-gradient(160deg, rgba(247,251,252,.88), rgba(224,237,240,.64));
+    border-color: rgba(255,255,255,.62);
+  }
+
+  .aqi-banner {
+    background: linear-gradient(135deg, rgba(84,112,121,.94), rgba(45,132,122,.86));
+    border-color: rgba(255,255,255,.42);
+  }
+
+  /* Section nav — horizontal scroll rail (desktop sidebar hidden below 961px) */
+  nav {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp3);
+    position: sticky;
+    top: 8px;
+    z-index: 250;
+    padding-bottom: var(--sp3);
+    margin-bottom: var(--sp6);
+  }
+
+  .nav-logo {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .nav-actions {
+    flex: 0 1 auto;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--sp2);
+    min-width: 0;
+  }
+
+  .nav-actions > .chip:first-child {
+    display: none;
+  }
+
+  #btn-export-pdf,
+  #btn-export {
+    display: none !important;
+  }
+
+  .nav-export-dropdown {
+    display: block;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .nav-menu {
+    display: flex;
+    flex: 1 1 100%;
+    width: 100%;
+    order: 10;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 10px 2px 4px;
+    margin: 0;
+    border-top: 1px solid rgba(88,116,125,.14);
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: var(--r-full);
+    font-size: .8rem;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover,
+  .nav-link:focus-visible {
+    transform: none;
+  }
+
+  .nav-link svg {
+    display: none;
+  }
+
+  .nav-link.active {
+    background: linear-gradient(135deg, rgba(63,111,121,.22), rgba(25,121,111,.16));
+    color: color-mix(in srgb, var(--secondary) 88%, var(--on-surface) 12%);
+    box-shadow:
+      inset 0 -3px 0 color-mix(in srgb, var(--tertiary) 82%, #fff 18%),
+      inset 0 1px 0 rgba(255,255,255,.42);
+  }
+
+  #main-content,
+  #air-quality,
+  #energy-metrics,
+  #trend-analysis,
+  #section-table {
+    scroll-margin-top: 132px;
+  }
+}
+
 @media (min-width: 961px) {
   .shell {
     max-width: none;
@@ -1577,6 +1757,25 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 
   .energy-card.featured {
     box-shadow: 0 10px 24px rgba(54,87,94,.065), inset 0 1px 0 rgba(255,255,255,.30);
+  }
+
+  .hero::after {
+    display: none;
+  }
+
+  .hero,
+  .aqi-banner,
+  .metric-grid,
+  .energy-section,
+  .chart-section,
+  .table-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 520px;
+  }
+
+  .chart-wrap,
+  .chart-card {
+    contain: layout paint style;
   }
 
   nav::before {
