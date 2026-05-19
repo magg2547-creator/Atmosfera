@@ -1,4 +1,4 @@
-﻿export function createPdfService(context) {
+export function createPdfService(context) {
   const {
     byId,
     fmt,
@@ -45,14 +45,8 @@ function getExportRowValues(row) {
   ];
 }
 
-// â”€â”€ Download helper (All Platforms) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────
 function fallbackDownload(blob, filename) {
-  // IE11 / Legacy Edge fallback
-  if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-    window.navigator.msSaveOrOpenBlob(blob, filename);
-    return;
-  }
-  
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.style.display = 'none';
@@ -61,10 +55,9 @@ function fallbackDownload(blob, filename) {
   link.rel = 'noopener'; // Security & browser context bypass
   
   document.body.appendChild(link);
-  // Optional: Check if we need to force octet-stream for stubborn browsers
   link.click();
   
-  // Cleanup â€” Give the browser enough time to process the download
+  // Cleanup — Give the browser enough time to process the download
   setTimeout(() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
@@ -308,8 +301,8 @@ function exportPDF(rows, options = {}) {
     doc.setFontSize(7.6);
     doc.setTextColor(...palette.ink);
 
-    values.forEach((value, index) => {
-      const column = columns[index];
+    values.forEach((value, colIndex) => {
+      const column = columns[colIndex];
       const textX = column.align === 'right' ? x + column.width - 2 : x + 2;
       doc.text(String(value), textX, y, { align: column.align });
       x += column.width;

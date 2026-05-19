@@ -32,7 +32,7 @@ export const DATE_FORMATTERS = Object.freeze({
 });
 
 export function parseTimestamp(value) {
-  if (!value) return new Date();
+  if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
 
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -79,7 +79,7 @@ export function parseTimestamp(value) {
   }
 
   const fallback = new Date(raw);
-  return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
 export function formatTimeShort(date) {

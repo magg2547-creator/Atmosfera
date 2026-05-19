@@ -1,4 +1,4 @@
-﻿import { createDonutLabelPlugin } from '../charts/plugins.js';
+import { createDonutLabelPlugin } from '../charts/plugins.js';
 import { createManualRefresh, fetchSheetData as requestSheetData } from './fetcher.js';
 import { createPdfService } from './pdf.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
@@ -131,7 +131,7 @@ const DOM = {
   btnPrev: () => byId('btn-prev'),
   btnNext: () => byId('btn-next'),
   sortHeaders: () => queryAllCached('thead th[data-sort]'),
-  rangeChips: () => queryAllCached('.range-chip'),
+  rangeChips: () => queryAllCached('[data-range-preset]'),
   pdfPresetButtons: () => queryAllCached('[data-pdf-preset]'),
   chartTabs: () => queryAllCached('.chart-tab'),
   toast: () => byId('toast'),
@@ -204,6 +204,51 @@ function setHTML(element, html) {
 
 function setText(element, text) {
   if (element) element.textContent = text;
+}
+
+// ── Animated Number Counter ─────────────────────────────────
+const activeAnimations = new Map();
+
+function animateCount(element, endValue, options = {}) {
+  if (!element) return;
+  const { digits = 1, duration = 600, suffix = '' } = options;
+  const startText = element.textContent?.replace(/[^\d.-]/g, '') || '0';
+  const startValue = parseFloat(startText) || 0;
+  const end = Number(endValue);
+
+  if (!Number.isFinite(end)) {
+    element.textContent = '-';
+    return;
+  }
+
+  // Skip animation if values are the same
+  if (Math.abs(startValue - end) < Math.pow(10, -digits)) {
+    element.textContent = end.toFixed(digits) + suffix;
+    return;
+  }
+
+  // Cancel previous animation on this element
+  const prev = activeAnimations.get(element);
+  if (prev) cancelAnimationFrame(prev);
+
+  const startTime = performance.now();
+  const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
+
+  function tick(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeOutQuart(progress);
+    const current = startValue + (end - startValue) * eased;
+    element.textContent = current.toFixed(digits) + suffix;
+
+    if (progress < 1) {
+      activeAnimations.set(element, requestAnimationFrame(tick));
+    } else {
+      activeAnimations.delete(element);
+    }
+  }
+
+  activeAnimations.set(element, requestAnimationFrame(tick));
 }
 
 function setWidth(element, percent) {
@@ -438,9 +483,14 @@ function normalizeRow(raw) {
 }
 
 function normalizeRows(rawRows) {
-  return rawRows
-    .map(normalizeRow)
-    .reverse();
+  const rows = rawRows.map(normalizeRow);
+  const validRows = rows.filter(row => row.time !== null);
+
+  if (validRows.length < rows.length) {
+    console.warn(`[Atmosfera] Skipped ${rows.length - validRows.length} row(s) with invalid timestamps`);
+  }
+
+  return validRows.reverse();
 }
 
 function copyMetricValues(source, target) {
@@ -696,13 +746,26 @@ async function fetchSheet(options = {}) {
 
 function renderMetricCards() {
   const current = state.current;
-  setHTML(DOM.valPm25(), `${fmt(current.pm25)}<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valPm10(), `${fmt(current.pm10)}<span class="metric-unit">&micro;g/m&sup3;</span>`);
-  setHTML(DOM.valTemp(), `${fmt(current.temp)}<span class="metric-unit">C</span>`);
-  setHTML(DOM.valHum(), `${fmt(current.hum, 0)}<span class="metric-unit">%</span>`);
-  setHTML(DOM.valCo2(), `${fmt(current.co2, 0)}<span class="metric-unit">ppm</span>`);
-  setHTML(DOM.valVolt(), `${fmt(current.volt)}<span class="metric-unit">V</span>`);
-  setHTML(DOM.valCurr(), `${fmt(current.curr)}<span class="metric-unit">A</span>`);
+
+  // Animate main number, then set unit via sibling
+  const animateMetric = (el, value, digits, unitHtml) => {
+    if (!el) return;
+    let numSpan = el.querySelector('.metric-num');
+    let unitSpan = el.querySelector('.metric-unit');
+    if (!numSpan) {
+      el.innerHTML = `<span class="metric-num"></span><span class="metric-unit">${unitHtml}</span>`;
+      numSpan = el.querySelector('.metric-num');
+    }
+    animateCount(numSpan, value, { digits });
+  };
+
+  animateMetric(DOM.valPm25(), current.pm25, 1, '&micro;g/m&sup3;');
+  animateMetric(DOM.valPm10(), current.pm10, 1, '&micro;g/m&sup3;');
+  animateMetric(DOM.valTemp(), current.temp, 1, 'C');
+  animateMetric(DOM.valHum(), current.hum, 0, '%');
+  animateMetric(DOM.valCo2(), current.co2, 0, 'ppm');
+  animateMetric(DOM.valVolt(), current.volt, 1, 'V');
+  animateMetric(DOM.valCurr(), current.curr, 1, 'A');
 }
 
 function renderDeltaBadges() {
@@ -730,8 +793,9 @@ function renderAqiBanner() {
   const aqi = calcAQI();
   const meta = getAqiMeta(aqi);
 
-  setText(DOM.aqiScore(), aqi);
   setText(DOM.aqiStatusText(), meta.label);
+
+  animateCount(DOM.aqiScore(), aqi, { digits: 0, duration: 800 });
 
   const dot = DOM.aqiDot();
   if (dot) dot.style.background = meta.dot;
@@ -775,9 +839,9 @@ function renderInsightPanel() {
   setWidth(DOM.barPf(), powerFactor * 100);
 
   if (charts.donut) {
-    const percent = Math.min(100, ((current.co2 - 350) / 4650) * 100);
+    const percent = Math.max(0, Math.min(100, ((current.co2 - 350) / 4650) * 100));
     charts.donut.data.datasets[0].data = [percent, 100 - percent];
-    charts.donut.update('none');
+    charts.donut.update();
   }
 }
 
@@ -1052,6 +1116,9 @@ function renderTable() {
 
   if (!tbody) return;
 
+  // Fade out → update → fade in
+  tbody.classList.add('is-fading');
+  const updateContent = () => {
   if (state.rows.length === 0) {
     tbody.innerHTML = `
       <tr class="table-empty-state">
@@ -1122,6 +1189,14 @@ function renderTable() {
   });
 
   pageNumbers.replaceChildren(fragment);
+
+  };  // end updateContent
+
+  // Delay content swap to let fade-out finish, then fade in
+  setTimeout(() => {
+    updateContent();
+    requestAnimationFrame(() => tbody.classList.remove('is-fading'));
+  }, 180);
 }
 
 function makeGradient(context, topColor, bottomColor, height = 220) {
@@ -1137,9 +1212,10 @@ function initCharts() {
   Chart.defaults.color = '#5a6a72';
   Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
 
-  const lineChartAnimation = window.matchMedia('(min-width: 961px)').matches
-    ? false
-    : { duration: 200 };
+  const lineChartAnimation = {
+    duration: 500,
+    easing: 'easeOutQuart',
+  };
   const lineDecimation = {
     enabled: true,
     algorithm: 'lttb',
@@ -1382,7 +1458,7 @@ function initCharts() {
     },
     options: {
       responsive: false,
-      cutout: '68',
+      cutout: '68%',
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
@@ -1393,14 +1469,19 @@ function initCharts() {
 }
 
 function getRowsForChartRange(rangeKey) {
-  const rows = [...state.rows].reverse().slice(-CONFIG.chartMaxPoints);
-  if (rows.length === 0 || rangeKey === '24h') return rows;
+  const allRows = [...state.rows].reverse();
+  if (allRows.length === 0) return allRows;
 
-  const latest = rows[rows.length - 1].time;
-  if (!(latest instanceof Date) || Number.isNaN(latest.getTime())) return rows;
+  if (rangeKey === '24h') return allRows.slice(-CONFIG.chartMaxPoints);
+
+  const latest = allRows[allRows.length - 1].time;
+  if (!(latest instanceof Date) || Number.isNaN(latest.getTime())) {
+    return allRows.slice(-CONFIG.chartMaxPoints);
+  }
 
   const rangeMs = rangeKey === '1h' ? 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
-  return rows.filter(row => latest.getTime() - row.time.getTime() <= rangeMs);
+  const filtered = allRows.filter(row => latest.getTime() - row.time.getTime() <= rangeMs);
+  return filtered.slice(-CONFIG.chartMaxPoints);
 }
 
 function applyChartRange(rangeKey) {
@@ -1427,14 +1508,14 @@ function applyChartRange(rangeKey) {
     charts.aq.data.datasets[1].data = rows.map(row => row.pm10);
     charts.aq.data.datasets[2].data = Array(rows.length).fill(15);
     charts.aq.data.datasets.forEach(applyPointVisibility);
-    charts.aq.update('none');
+    charts.aq.update();
   }
 
   if (charts.co2) {
     charts.co2.data.labels = labels;
     charts.co2.data.datasets[0].data = rows.map(row => row.co2);
     charts.co2.data.datasets.forEach(applyPointVisibility);
-    charts.co2.update('none');
+    charts.co2.update();
   }
 
   if (charts.energy) {
@@ -1443,7 +1524,7 @@ function applyChartRange(rangeKey) {
     charts.energy.data.datasets[1].data = rows.map(row => row.curr);
     charts.energy.data.datasets[2].data = rows.map(row => row.pwr);
     charts.energy.data.datasets.forEach(applyPointVisibility);
-    charts.energy.update('none');
+    charts.energy.update();
   }
 }
 
@@ -2346,7 +2427,11 @@ function updatePdfHealthSummary(rows) {
 
   const avgPm25 = rows.reduce((sum, row) => sum + row.pm25, 0) / rows.length;
   const maxCo2 = rows.reduce((max, row) => Math.max(max, row.co2), 0);
-  const totalEnergy = rows.reduce((sum, row) => sum + row.energy, 0);
+  // PZEM-004T reports cumulative kWh; actual consumption = max − min
+  const energyValues = rows.map(row => row.energy).filter(Number.isFinite);
+  const totalEnergy = energyValues.length > 0
+    ? Math.max(...energyValues) - Math.min(...energyValues)
+    : 0;
 
   setText(DOM.pdfHealthPm25(), formatPdfMetric(avgPm25, 1, TXT.microgPerM3));
   setText(DOM.pdfHealthCo2(), formatPdfMetric(maxCo2, 0, 'ppm'));

@@ -57,7 +57,7 @@
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: auto; }
+html { scroll-behavior: smooth; }
 html.is-booting { scroll-behavior: auto !important; }
 html.is-scrolling {
   --glass-backdrop: none;
@@ -613,8 +613,9 @@ nav {
   opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards;
 }
 .metric-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.008);
   border-color: var(--glass-border-strong);
+  box-shadow: var(--sh-float);
 }
 .metric-card::before {
   content: ''; position: absolute; bottom: -40px; right: -40px;
@@ -774,8 +775,9 @@ nav {
   opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards;
 }
 .energy-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.008);
   border-color: var(--glass-border-strong);
+  box-shadow: var(--sh-float);
 }
 .energy-card.featured {
   grid-column: 1 / -1; display: grid;
@@ -840,6 +842,7 @@ nav {
 .legend-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .chart-wrap   { position: relative; height: 220px; min-width: 0; width: 100%; }
 .chart-wrap canvas { display: block; width: 100% !important; }
+.chart-wrap--energy { height: 200px; }
 .chart-tabs   {
   display: flex; gap: var(--sp2);
   background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(234,243,245,.16));
@@ -1207,6 +1210,24 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 @keyframes spin     { to { transform: rotate(360deg); } }
 @keyframes refreshPulse { from { opacity: .72; } to { opacity: .96; } }
 @keyframes refreshSweep { from { background-position: -220px 0; } to { background-position: 220px 0; } }
+
+/* ── TABLE BODY TRANSITION ── */
+#table-body {
+  transition: opacity .2s ease;
+}
+#table-body.is-fading {
+  opacity: 0;
+}
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 .metric-card:nth-child(1) { animation-delay: .06s; }
 .metric-card:nth-child(2) { animation-delay: .1s; }
