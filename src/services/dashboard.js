@@ -2105,8 +2105,8 @@ function initSmoothWheel() {
 
   let current = window.scrollY;
   let target = window.scrollY;
-  let rafId = null;
-  const lerp = 0.1;  // 0.05 = very smooth/slow, 0.15 = snappier
+  let animating = false;
+  const lerp = 0.12;
 
   window.addEventListener('wheel', (e) => {
     // Don't intercept horizontal scroll or zooming
@@ -2114,10 +2114,19 @@ function initSmoothWheel() {
 
     e.preventDefault();
 
+    // Sync current position on first wheel after idle
+    if (!animating) {
+      current = window.scrollY;
+      target = current;
+    }
+
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
     target = Math.max(0, Math.min(target + e.deltaY, maxScroll));
 
-    if (!rafId) tick();
+    if (!animating) {
+      animating = true;
+      requestAnimationFrame(tick);
+    }
   }, { passive: false });
 
   function tick() {
@@ -2126,17 +2135,17 @@ function initSmoothWheel() {
     if (Math.abs(current - target) < 0.5) {
       current = target;
       window.scrollTo(0, current);
-      rafId = null;
+      animating = false;
       return;
     }
 
     window.scrollTo(0, current);
-    rafId = requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
   }
 
-  // Sync when user scrolls via keyboard, scrollbar drag, or programmatic
+  // Sync when user scrolls via keyboard or scrollbar drag (not during animation)
   window.addEventListener('scroll', () => {
-    if (!rafId) {
+    if (!animating) {
       current = window.scrollY;
       target = window.scrollY;
     }
