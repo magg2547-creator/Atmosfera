@@ -2106,7 +2106,10 @@ function initSmoothWheel() {
   let current = window.scrollY;
   let target = window.scrollY;
   let animating = false;
-  const lerp = 0.12;
+  const LERP = 0.07;        // Lower = smoother (0.05 ultra smooth, 0.1 snappy)
+  const MULTIPLIER = 1.2;   // Compensate for smoothing lag
+
+  console.log('[Atmosfera] Smooth wheel scroll initialized');
 
   window.addEventListener('wheel', (e) => {
     // Don't intercept horizontal scroll or zooming
@@ -2121,7 +2124,7 @@ function initSmoothWheel() {
     }
 
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    target = Math.max(0, Math.min(target + e.deltaY, maxScroll));
+    target = Math.max(0, Math.min(target + e.deltaY * MULTIPLIER, maxScroll));
 
     if (!animating) {
       animating = true;
@@ -2130,7 +2133,7 @@ function initSmoothWheel() {
   }, { passive: false });
 
   function tick() {
-    current += (target - current) * lerp;
+    current += (target - current) * LERP;
 
     if (Math.abs(current - target) < 0.5) {
       current = target;
