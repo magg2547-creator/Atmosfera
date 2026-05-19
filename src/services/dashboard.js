@@ -1709,6 +1709,31 @@ function setActiveNavLink(hash) {
   if (activeLink && window.matchMedia('(max-width: 960px)').matches) {
     activeLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
+
+  // Slide the nav indicator to the active link
+  moveNavIndicator(activeLink);
+}
+
+let navIndicator = null;
+
+function moveNavIndicator(activeLink) {
+  if (!activeLink) return;
+  const menu = activeLink.closest('.nav-menu');
+  if (!menu) return;
+
+  // Create indicator on first call
+  if (!navIndicator) {
+    navIndicator = document.createElement('div');
+    navIndicator.className = 'nav-indicator';
+    menu.style.position = 'relative';
+    menu.appendChild(navIndicator);
+  }
+
+  const menuRect = menu.getBoundingClientRect();
+  const linkRect = activeLink.getBoundingClientRect();
+
+  navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
+  navIndicator.style.height = `${linkRect.height}px`;
 }
 
 let navSelectionLockHash = null;
@@ -2062,6 +2087,126 @@ export function initApp() {
     document.documentElement.classList.remove('is-booting');
     setActiveNavLink('#main-content');
   });
+
+  // ── Scroll Reveal Animations ──────────────────────────────
+  initScrollReveal();
+
+  // ── Hero Parallax ─────────────────────────────────────────
+  initHeroParallax();
+
+  // ── Smooth Mouse Wheel ────────────────────────────────────
+  initSmoothWheel();
+}
+
+// ── Smooth Wheel Scroll (lerp-based) ────────────────────────
+function initSmoothWheel() {
+  // Skip on touch-only devices
+  if ('ontouchstart' in window && !window.matchMedia('(pointer: fine)').matches) return;
+
+  let current = window.scrollY;
+  let target = window.scrollY;
+  let rafId = null;
+  const lerp = 0.1;  // 0.05 = very smooth/slow, 0.15 = snappier
+
+  window.addEventListener('wheel', (e) => {
+    // Don't intercept horizontal scroll or zooming
+    if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+    e.preventDefault();
+
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    target = Math.max(0, Math.min(target + e.deltaY, maxScroll));
+
+    if (!rafId) tick();
+  }, { passive: false });
+
+  function tick() {
+    current += (target - current) * lerp;
+
+    if (Math.abs(current - target) < 0.5) {
+      current = target;
+      window.scrollTo(0, current);
+      rafId = null;
+      return;
+    }
+
+    window.scrollTo(0, current);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Sync when user scrolls via keyboard, scrollbar drag, or programmatic
+  window.addEventListener('scroll', () => {
+    if (!rafId) {
+      current = window.scrollY;
+      target = window.scrollY;
+    }
+  }, { passive: true });
+}
+
+function initScrollReveal() {
+  const revealTargets = document.querySelectorAll(
+    '.metric-card, .energy-card, .insight-panel, .chart-card, .table-card, .aqi-banner, .section-header'
+  );
+
+  const revealSet = new Set(revealTargets);
+
+  // Set initial hidden state
+  revealTargets.forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity .65s cubic-bezier(.22,.86,.32,1), transform .65s cubic-bezier(.22,.86,.32,1)';
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+
+        const el = entry.target;
+        const parent = el.parentElement;
+        const siblings = parent ? [...parent.children].filter(c => revealSet.has(c)) : [];
+        const idx = siblings.indexOf(el);
+        const delay = idx >= 0 ? idx * 80 : 0;
+
+        setTimeout(() => {
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+
+          // After transition ends, remove inline styles so CSS hover can work
+          el.addEventListener('transitionend', () => {
+            el.style.removeProperty('opacity');
+            el.style.removeProperty('transform');
+            el.style.removeProperty('transition');
+          }, { once: true });
+        }, delay);
+
+        observer.unobserve(el);
+      });
+    },
+    { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  revealTargets.forEach(el => observer.observe(el));
+}
+
+function initHeroParallax() {
+  const hero = document.querySelector('.hero');
+  if (!hero) return;
+
+  // Promote to compositor layer
+  hero.style.willChange = 'opacity';
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      // Only adjust opacity — transforms are expensive with backdrop-filter siblings
+      const scrollY = window.scrollY;
+      hero.style.opacity = String(Math.max(0, 1 - scrollY / 700));
+      ticking = false;
+    });
+  }, { passive: true });
 }
 
 // â”€â”€ PDF MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -2320,6 +2465,10 @@ function openPdfModal() {
     lastFocusedElementBeforeModal = document.activeElement;
     modal.addEventListener('keydown', handlePdfModalKeydown);
 
+    // Trigger reflow then animate in
+    void modal.offsetHeight;
+    modal.classList.add('is-active');
+
     const firstFocusable = modal.querySelector(MODAL_FOCUSABLE_SELECTOR);
     if (firstFocusable instanceof HTMLElement) firstFocusable.focus();
   }
@@ -2330,8 +2479,17 @@ function openPdfModal() {
 function closePdfModal() {
   const modal = byId('modal-pdf');
   if (modal) {
-    modal.hidden = true;
+    modal.classList.remove('is-active');
     modal.removeEventListener('keydown', handlePdfModalKeydown);
+
+    // Wait for animation to finish before hiding
+    const onEnd = () => {
+      modal.hidden = true;
+      modal.removeEventListener('transitionend', onEnd);
+    };
+    modal.addEventListener('transitionend', onEnd, { once: true });
+    // Fallback if transitionend doesn't fire
+    setTimeout(() => { if (!modal.hidden) modal.hidden = true; }, 400);
   }
 
   cancelScheduledPdfCalendarRender();

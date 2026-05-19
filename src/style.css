@@ -77,6 +77,18 @@ html.is-scrolling .insight-bar-fill,
 html.is-scrolling .aqi-gauge-fill {
   transition: none !important;
 }
+
+/* Disable all backdrop-filter during scroll for 60fps */
+html.is-scrolling .metric-card,
+html.is-scrolling .energy-card,
+html.is-scrolling .insight-panel,
+html.is-scrolling .chart-card,
+html.is-scrolling .table-card,
+html.is-scrolling .alert-panel,
+html.is-scrolling .status-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 html.is-scrolling .live-indicator {
   animation-play-state: paused;
 }
@@ -241,9 +253,24 @@ nav {
   outline: none;
 }
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(63,111,121,.18), rgba(25,121,111,.12));
+  background: transparent;
   color: color-mix(in srgb, var(--secondary) 84%, var(--on-surface) 16%);
+  box-shadow: none;
+}
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: calc(var(--r-lg) - 4px);
+  background: linear-gradient(135deg, rgba(63,111,121,.18), rgba(25,121,111,.12));
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tertiary) 78%, #fff 22%), inset 0 1px 0 rgba(255,255,255,.38);
+  pointer-events: none;
+  z-index: 0;
+  transition: top .35s cubic-bezier(.22,.86,.32,1), height .35s cubic-bezier(.22,.86,.32,1);
+}
+.nav-link {
+  position: relative;
+  z-index: 1;
 }
 .visually-hidden {
   position: absolute;
@@ -530,7 +557,6 @@ nav {
   box-shadow: var(--sh-deep);
   backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(var(--glass-saturate));
-  opacity: 0; transform: translateY(20px); animation: fadeUp .7s ease forwards .1s;
 }
 .aqi-banner > * { min-width: 0; }
 .aqi-banner::before {
@@ -610,7 +636,6 @@ nav {
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   position: relative; overflow: hidden; cursor: default; min-width: 0;
   transition: transform .22s, box-shadow .22s;
-  opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards;
 }
 .metric-card:hover {
   transform: translateY(-2px) scale(1.008);
@@ -772,7 +797,6 @@ nav {
   position: relative; overflow: hidden; cursor: default; min-width: 0;
   min-height: 170px;
   transition: transform .22s, box-shadow .22s;
-  opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards;
 }
 .energy-card:hover {
   transform: translateY(-2px) scale(1.008);
@@ -809,7 +833,6 @@ nav {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   display: flex; flex-direction: column; gap: var(--sp6); position: relative; min-width: 0;
-  opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards .22s;
 }
 .insight-title  { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--on-surface); letter-spacing: -.02em; }
 .insight-item   { display: flex; flex-direction: column; gap: var(--sp2); }
@@ -831,7 +854,6 @@ nav {
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  opacity: 0; transform: translateY(10px); animation: fadeUp .5s cubic-bezier(.22,.86,.32,1) forwards .16s;
 }
 .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp6); flex-wrap: wrap; gap: var(--sp4); }
 .chart-header > * { min-width: 0; }
@@ -894,7 +916,7 @@ nav {
    No-line rule: row separation via hover tonal shift only.
    No border-top on tbody tr per DESIGN.md.
 ─────────────────── */
-.table-section { margin-bottom: var(--sp10); opacity: 0; transform: translateY(16px); animation: fadeUp .6s ease forwards .4s; }
+.table-section { margin-bottom: var(--sp10); }
 .table-card    {
   background: linear-gradient(160deg, var(--glass-bg-strong), rgba(237,245,247,.18));
   border-radius: var(--r-xl);
@@ -912,8 +934,10 @@ nav {
 .energy-card,
 .insight-panel,
 .chart-card,
-.table-card {
-  contain: paint;
+.table-card,
+.alert-panel,
+.status-card {
+  contain: layout paint style;
 }
 .table-controls{ display: flex; gap: var(--sp3); align-items: center; margin-bottom: var(--sp6); flex-wrap: wrap; }
 .table-controls > * { min-width: 0; }
@@ -2036,8 +2060,22 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
   display: flex; align-items: center; justify-content: center;
   padding: var(--sp6);
   overflow-y: auto;
+
+  /* Animate open/close */
+  opacity: 0;
+  transition: opacity .3s ease;
 }
 .modal-overlay[hidden] { display: none; }
+.modal-overlay.is-active { opacity: 1; }
+.modal-overlay .modal {
+  transform: translateY(16px) scale(.97);
+  transition: transform .35s cubic-bezier(.22,.86,.32,1), opacity .3s ease;
+  opacity: 0;
+}
+.modal-overlay.is-active .modal {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
 .modal {
   background:
     radial-gradient(circle at top left, rgba(173,148,97,.08), transparent 34%),
