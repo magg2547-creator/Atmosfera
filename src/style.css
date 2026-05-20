@@ -57,7 +57,7 @@
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
 html.is-booting { scroll-behavior: auto !important; }
 html.is-scrolling {
   --glass-backdrop: none;
@@ -266,7 +266,9 @@ nav {
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tertiary) 78%, #fff 22%), inset 0 1px 0 rgba(255,255,255,.38);
   pointer-events: none;
   z-index: 0;
-  transition: top .35s cubic-bezier(.22,.86,.32,1), height .35s cubic-bezier(.22,.86,.32,1);
+  /* ใช้ cubic-bezier สไตล์ Apple เพื่อความพริ้วไหวสูงสุด */
+  transition: top 0.38s cubic-bezier(0.25, 1, 0.5, 1), height 0.38s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: top, height; /* เปิดฮาร์ดแวร์เร่งความเร็ว 60fps+ */
 }
 .nav-link {
   position: relative;
@@ -678,15 +680,31 @@ nav {
   transform: translateX(-100%);
 }
 .skeleton-overlay {
-  display: none; position: absolute; inset: 0; z-index: 2;
+  position: absolute; inset: 0; z-index: 10;
   padding: var(--sp8); border-radius: var(--r-xl);
-  background: linear-gradient(160deg, rgba(247,251,252,.90), rgba(230,240,243,.76));
+  background: linear-gradient(160deg, rgba(247,251,252,.92), rgba(230,240,243,.80));
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .35s cubic-bezier(.22,.86,.32,1), visibility .35s;
+  pointer-events: none;
+  display: grid; gap: var(--sp4); align-items: start;
+}
+.skeleton-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.60) 50%, transparent 100%);
+  animation: shimmer 1.8s ease-in-out infinite;
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.is-loading > .skeleton-overlay {
+  opacity: 1;
+  visibility: visible;
 }
 .is-loading > :not(.skeleton-overlay) {
-  visibility: hidden;
+  opacity: 0;
+  transition: opacity .2s ease;
 }
-.skeleton-overlay.visible { display: block; }
-.skeleton-overlay.flex    { display: flex; flex-direction: column; gap: var(--sp6); }
 
 .shell.is-starting .nav-logo,
 .shell.is-starting .nav-status,
@@ -2052,21 +2070,21 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 /* ── PDF EXPORT MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 500;
-  background:
-    radial-gradient(circle at top, rgba(116,146,142,.12), transparent 42%),
-    rgba(27,37,44,.56);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: radial-gradient(circle at top, rgba(116,146,142,.12), transparent 42%), rgba(27,37,44,.56);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
   display: flex; align-items: center; justify-content: center;
   padding: var(--sp6);
   overflow-y: auto;
-
-  /* Animate open/close */
   opacity: 0;
-  transition: opacity .3s ease;
+  /* ผูกทรานซิชันให้ฉากหลังค่อยๆ เบลอละมุนตา */
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+              backdrop-filter 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+              -webkit-backdrop-filter 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: opacity, backdrop-filter;
 }
 .modal-overlay[hidden] { display: none; }
-.modal-overlay.is-active { opacity: 1; }
+.modal-overlay.is-active { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .modal-overlay .modal {
   transform: translateY(16px) scale(.97);
   transition: transform .35s cubic-bezier(.22,.86,.32,1), opacity .3s ease;

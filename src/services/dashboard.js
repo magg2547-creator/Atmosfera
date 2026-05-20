@@ -1,7 +1,9 @@
 import { createDonutLabelPlugin } from '../charts/plugins.js';
 import { createManualRefresh, fetchSheetData as requestSheetData } from './fetcher.js';
 import { createPdfService } from './pdf.js';
+import { createPdfDatePicker } from './pdfDatePicker.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { createReactiveState } from '../store/reactiveState.js';
 import {
   DATE_FORMATTERS,
   addMonths,
@@ -16,6 +18,15 @@ import {
   parseTimestamp,
   startOfMonth,
 } from '../utils/dateHelper.js';
+import { calcAQI, getAqiMeta } from '../utils/aqiHelper.js';
+import {
+  applyChartRange,
+  clearCharts,
+  getCharts,
+  initCharts,
+  resizeAllCharts,
+  updateCharts,
+} from '../charts/dashboardCharts.js';
 
 const CONFIG = {
   sheetUrl: '/api/data',
@@ -26,6 +37,14 @@ const CONFIG = {
   chartMaxPoints: 60,
 };
 
+const METRICS_LIMITS = Object.freeze({
+  pm25: { gaugeMax: 200 },
+  pm10: { gaugeMax: 400 },
+  co2: { baseline: 350, gaugeRange: 4650 },
+  power: { reference: 3000 },
+  energy: { reference: 30 },
+});
+
 /** Unicode text tokens (ASCII-safe source; avoids mojibake in editors) */
 const TXT = Object.freeze({
   emDash: '\u2014',
@@ -34,7 +53,7 @@ const TXT = Object.freeze({
   microgPerM3: '\u00b5g/m\u00b3',
 });
 
-const state = {
+const INITIAL_STATE = {
   current: { pm25: 0, pm10: 0, temp: 0, hum: 0, co2: 0, volt: 0, curr: 0, pwr: 0, energy: 0 },
   previous: { pm25: 0, pm10: 0, temp: 0, hum: 0, co2: 0, volt: 0, curr: 0, pwr: 0, energy: 0 },
   rows: [],
@@ -52,6 +71,9 @@ const state = {
   },
   fetch: { isFetching: false, countdown: null, uiState: 'idle', lastErrorMessage: null, initialStartedAt: 0 },
 };
+
+const store = createReactiveState(INITIAL_STATE);
+const { state, setState, subscribe, batch } = store;
 
 const domIdCache = new Map();
 const domQueryCache = new Map();
@@ -175,9 +197,8 @@ const METRIC_KEYS = Object.freeze([
   'energy',
 ]);
 
-const PDF_WEEKDAY_LABELS = Object.freeze(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
 
-const charts = { aq: null, co2: null, energy: null, donut: null };
+
 let lastFocusedElementBeforeModal = null;
 const MODAL_FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -188,7 +209,7 @@ const MODAL_FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-const DONUT_LABEL_PLUGIN = createDonutLabelPlugin(() => state);
+
 
 const fmt = (value, digits = 1) => {
   const number = Number(value);
@@ -364,109 +385,6 @@ function getFriendlyPdfRangeLabel(fromVal, toVal) {
   return `${formatPdfDisplayDate(fromVal)} ${TXT.arrow} ${formatPdfDisplayDate(toVal)}`;
 }
 
-function getCalendarWeekdayIndex(date) {
-  return (date.getDay() + 6) % 7;
-}
-
-function resetPdfDragState() {
-  state.pdfPicker.drag = { active: false, anchor: '', current: '', moved: false };
-}
-
-function resetPdfPendingAnchor() {
-  state.pdfPicker.pendingAnchor = '';
-}
-
-function clearPdfClickSuppression() {
-  state.pdfPicker.suppressClick = false;
-}
-
-function armPdfClickSuppression() {
-  state.pdfPicker.suppressClick = true;
-  window.setTimeout(clearPdfClickSuppression, 0);
-}
-
-function getOrderedDateValues(left, right) {
-  if (!left && !right) return ['', ''];
-  if (!left) return [right, right];
-  if (!right) return [left, left];
-  return left <= right ? [left, right] : [right, left];
-}
-
-function getPdfCalendarVisualRange() {
-  if (state.pdfPicker.drag.active && state.pdfPicker.drag.anchor) {
-    const [fromValue, toValue] = getOrderedDateValues(
-      state.pdfPicker.drag.anchor,
-      state.pdfPicker.drag.current || state.pdfPicker.drag.anchor
-    );
-
-    return {
-      fromDate: parseDateInputValue(fromValue),
-      toDate: parseDateInputValue(toValue),
-    };
-  }
-
-  return {
-    fromDate: parseDateInputValue(DOM.pdfDateFrom()?.value),
-    toDate: parseDateInputValue(DOM.pdfDateTo()?.value),
-  };
-}
-
-function calcAqiFromPm25(pm25) {
-  const breakpoints = [
-    [0, 12, 0, 50],
-    [12.1, 35.4, 51, 100],
-    [35.5, 55.4, 101, 150],
-    [55.5, 150.4, 151, 200],
-    [150.5, 250.4, 201, 300],
-    [250.5, 350.4, 301, 400],  // à¹€à¸žà¸´à¹ˆà¸¡
-    [350.5, 500.4, 401, 500],  // à¹€à¸žà¸´à¹ˆà¸¡
-  ];
-
-  for (const [low, high, aqiLow, aqiHigh] of breakpoints) {
-    if (pm25 >= low && pm25 <= high) {
-      return Math.round(((aqiHigh - aqiLow) / (high - low)) * (pm25 - low) + aqiLow);
-    }
-  }
-
-  return 500; // PM2.5 > 500.4 â†’ Hazardous ceiling
-}
-
-function calcAqiFromPm10(pm10) {
-  const breakpoints = [
-    [0, 54, 0, 50],
-    [55, 154, 51, 100],
-    [155, 254, 101, 150],
-    [255, 354, 151, 200],
-    [355, 424, 201, 300],
-    [425, 504, 301, 400],
-    [505, 604, 401, 500],
-  ];
-
-  for (const [low, high, aqiLow, aqiHigh] of breakpoints) {
-    if (pm10 >= low && pm10 <= high) {
-      return Math.round(((aqiHigh - aqiLow) / (high - low)) * (pm10 - low) + aqiLow);
-    }
-  }
-
-  return 500;
-}
-
-function calcAQI() {
-  return Math.max(
-    calcAqiFromPm25(state.current.pm25),
-    calcAqiFromPm10(state.current.pm10)
-  );
-}
-
-function getAqiMeta(aqi) {
-  if (aqi <= 50) return { label: 'Good', dot: '#a8e6c8' };
-  if (aqi <= 100) return { label: 'Moderate', dot: '#fde68a' };
-  if (aqi <= 150) return { label: 'Unhealthy for Sensitive Groups', dot: '#fca5a5' };
-  if (aqi <= 200) return { label: 'Unhealthy', dot: '#f87171' };
-  if (aqi <= 300) return { label: 'Very Unhealthy', dot: '#c084fc' }; // à¹€à¸žà¸´à¹ˆà¸¡
-  return { label: 'Hazardous', dot: '#9f1239' }; // à¹€à¸žà¸´à¹ˆà¸¡
-}
-
 function normalizeRow(raw) {
   return {
     time: parseTimestamp(raw.timestamp),
@@ -493,20 +411,6 @@ function normalizeRows(rawRows) {
   return validRows.reverse();
 }
 
-function copyMetricValues(source, target) {
-  METRIC_KEYS.forEach(key => {
-    target[key] = source?.[key] ?? 0;
-  });
-}
-
-function syncMetricStateFromRows(rows) {
-  const [currentRow] = rows;
-  const previousRow = rows[1] ?? currentRow;
-
-  copyMetricValues(currentRow, state.current);
-  copyMetricValues(previousRow, state.previous);
-}
-
 function handleFetchError(error, options = {}) {
   const { trigger = 'auto' } = options;
   hideEmptyState();
@@ -518,7 +422,7 @@ function handleFetchError(error, options = {}) {
   if (trigger !== 'auto' || state.fetch.lastErrorMessage !== error.message) {
     showToast(status.toast);
   }
-  state.fetch.lastErrorMessage = error.message;
+  setState({ fetch: { lastErrorMessage: error.message } });
   console.error('[Atmosfera] fetch error:', error);
 
   startCountdown();
@@ -572,8 +476,11 @@ function resetDeltaBadge(element) {
 }
 
 function resetMetricState() {
-  copyMetricValues(null, state.current);
-  copyMetricValues(null, state.previous);
+  const emptyMetrics = { pm25: 0, pm10: 0, temp: 0, hum: 0, co2: 0, volt: 0, curr: 0, pwr: 0, energy: 0 };
+  setState({
+    current: { ...emptyMetrics },
+    previous: { ...emptyMetrics },
+  });
 }
 
 function resetDashboardBadges() {
@@ -602,35 +509,23 @@ function resetInsightPanel() {
   setWidth(DOM.barPf(), 0);
 }
 
-function clearCharts() {
-  Object.values(charts).forEach(chart => {
-    if (!chart) return;
-
-    chart.data.labels = [];
-
-    if (Array.isArray(chart.data.datasets)) {
-      chart.data.datasets.forEach(dataset => {
-        dataset.data = [];
-      });
-    }
-
-    chart.update('none');
-  });
-}
-
 function showEmptyState() {
   const empty = DOM.emptyState();
   if (empty) empty.hidden = false;
 }
 
 function renderEmptyState() {
-  state.fetch.uiState = 'empty';
-  setSystemStatus('waiting');
-  state.rows = [];
-  state.filteredRows = [];
-  state.table.currentPage = 1;
-  resetMetricState();
+  batch(() => {
+    setState({
+      fetch: { uiState: 'empty' },
+      rows: [],
+      filteredRows: [],
+      table: { currentPage: 1 },
+    });
+    resetMetricState();
+  });
 
+  setSystemStatus('waiting');
   hideErrorBanner();
   showEmptyState();
 
@@ -681,57 +576,63 @@ async function fetchSheet(options = {}) {
   if (state.fetch.isFetching) return;
 
   if (trigger === 'initial') {
-    state.fetch.initialStartedAt = performance.now();
+    setState({ fetch: { initialStartedAt: performance.now() } });
   }
 
   if (showLoading) {
     setRefreshVisualState(true);
   }
 
-  state.fetch.isFetching = true;
+  setState({ fetch: { isFetching: true } });
   setText(DOM.lastUpdate(), 'Loading...');
 
   try {
     const rawRows = await requestSheetData(CONFIG);
 
     if (rawRows.length === 0) {
-      state.fetch.lastErrorMessage = null;
-      state.fetch.uiState = 'empty';
-      setSystemStatus('waiting');
+      setState({
+        fetch: { lastErrorMessage: null, uiState: 'empty' },
+      });
       renderEmptyState();
       startCountdown();
       return;
     }
 
     const normalizedRows = normalizeRows(rawRows);
+    const [currentRow] = normalizedRows;
+    const previousRow = normalizedRows[1] ?? currentRow;
 
-    state.fetch.lastErrorMessage = null;
-    state.fetch.uiState = 'ready';
-    state.rows = normalizedRows;
-    setSystemStatus('live');
+    const nextCurrent = {};
+    const nextPrevious = {};
+    METRIC_KEYS.forEach(key => {
+      nextCurrent[key] = currentRow?.[key] ?? 0;
+      nextPrevious[key] = previousRow?.[key] ?? 0;
+    });
 
-    syncMetricStateFromRows(normalizedRows);
+    batch(() => {
+      setState({
+        fetch: { lastErrorMessage: null, uiState: 'ready' },
+        rows: normalizedRows,
+        current: nextCurrent,
+        previous: nextPrevious,
+      });
+    });
 
     hideEmptyState();
     hideErrorBanner();
-
-    renderDashboard();
-    recomputeTableView();
-    updateCharts();
-    requestAnimationFrame(() => syncActiveNavLink());
 
     setText(DOM.lastUpdate(), 'Just now');
     showToast(`Synced ${normalizedRows.length} records`);
 
     startCountdown();
     requestAnimationFrame(() => resizeAllCharts());
+    requestAnimationFrame(() => syncActiveNavLink());
   } catch (error) {
-    state.fetch.uiState = 'error';
-    setSystemStatus('offline');
+    setState({ fetch: { uiState: 'error' } });
     hideEmptyState();
     handleFetchError(error, { trigger });
   } finally {
-    state.fetch.isFetching = false;
+    setState({ fetch: { isFetching: false } });
     setRefreshVisualState(false);
     if (trigger === 'initial') {
       const elapsed = performance.now() - state.fetch.initialStartedAt;
@@ -790,7 +691,7 @@ function renderDeltaBadges() {
 
 function renderAqiBanner() {
   const current = state.current;
-  const aqi = calcAQI();
+  const aqi = calcAQI(current.pm25, current.pm10);
   const meta = getAqiMeta(aqi);
 
   setText(DOM.aqiStatusText(), meta.label);
@@ -807,15 +708,15 @@ function renderAqiBanner() {
   setHTML(DOM.miniHum(), `${fmt(current.hum, 0)}<span class="aqi-mini-unit">%</span>`);
   setHTML(DOM.miniPwr(), `${fmt(current.pwr, 1)}<span class="aqi-mini-unit">W</span>`);
 
-  setWidth(DOM.gaugePm25(), (current.pm25 / 200) * 100);
-  setWidth(DOM.gaugePm10(), (current.pm10 / 400) * 100);
-  setWidth(DOM.gaugeCo2(), ((current.co2 - 350) / 4650) * 100);
+  setWidth(DOM.gaugePm25(), (current.pm25 / METRICS_LIMITS.pm25.gaugeMax) * 100);
+  setWidth(DOM.gaugePm10(), (current.pm10 / METRICS_LIMITS.pm10.gaugeMax) * 100);
+  setWidth(DOM.gaugeCo2(), ((current.co2 - METRICS_LIMITS.co2.baseline) / METRICS_LIMITS.co2.gaugeRange) * 100);
 }
 
 function renderInsightPanel() {
   const current = state.current;
-  const powerReference = 3000;
-  const energyReference = 30;
+  const powerReference = METRICS_LIMITS.power.reference;
+  const energyReference = METRICS_LIMITS.energy.reference;
   const powerFactor = current.volt > 0 && current.curr > 0
     ? Math.min(1, current.pwr / (current.volt * current.curr))
     : 0;
@@ -838,10 +739,11 @@ function renderInsightPanel() {
   setWidth(DOM.barEnergy(), (current.energy / energyReference) * 100);
   setWidth(DOM.barPf(), powerFactor * 100);
 
-  if (charts.donut) {
-    const percent = Math.max(0, Math.min(100, ((current.co2 - 350) / 4650) * 100));
-    charts.donut.data.datasets[0].data = [percent, 100 - percent];
-    charts.donut.update();
+  const chartsRef = getCharts();
+  if (chartsRef.donut) {
+    const percent = Math.max(0, Math.min(100, ((current.co2 - METRICS_LIMITS.co2.baseline) / METRICS_LIMITS.co2.gaugeRange) * 100));
+    chartsRef.donut.data.datasets[0].data = [percent, 100 - percent];
+    chartsRef.donut.update();
   }
 }
 
@@ -851,6 +753,23 @@ function renderDashboard() {
   renderAqiBanner();
   renderInsightPanel();
 }
+
+// ── Reactive Subscriptions ──────────────────────────────────
+subscribe('current', renderMetricCards);
+subscribe('previous', renderDeltaBadges);
+subscribe('current', renderAqiBanner);
+subscribe('current', renderInsightPanel);
+subscribe('rows', () => {
+  recomputeTableView();
+  updateCharts(state, DOM, formatTimeShort);
+});
+subscribe('filteredRows', renderTable);
+subscribe('table', renderTable);
+subscribe('fetch.uiState', (s) => {
+  if (s.fetch.uiState === 'ready') setSystemStatus('live');
+  else if (s.fetch.uiState === 'error') setSystemStatus('offline');
+  else if (s.fetch.uiState === 'empty') setSystemStatus('waiting');
+});
 
 function sortRows(rows) {
   const { sortKey, sortDir } = state.table;
@@ -933,20 +852,12 @@ function matchesSelectedRange(row) {
 function matchesSearchQuery(row, query = DOM.tableSearch()?.value.toLowerCase().trim() || '') {
   if (!query) return true;
 
-  const haystack = [
-    formatDateTime(row.time),
-    row.pm25,
-    row.pm10,
-    row.temp,
-    row.hum,
-    row.co2,
-    row.volt,
-    row.curr,
-    row.pwr,
-    row.energy,
-  ].join(' ').toLowerCase();
+  const dateStr = row.time.toISOString().slice(0, 10);
+  const timeStr = row.time.toTimeString().slice(0, 8);
 
-  return haystack.includes(query);
+  const haystack = `${dateStr} ${timeStr} ${row.pm25} ${row.pm10} ${row.temp} ${row.hum} ${row.co2} ${row.volt} ${row.curr} ${row.pwr} ${row.energy}`;
+
+  return haystack.toLowerCase().includes(query);
 }
 
 function filterRows(rows) {
@@ -1029,35 +940,36 @@ function syncSortIndicators() {
 }
 
 function recomputeTableView() {
-  state.table.currentPage = 1;
+  batch(() => {
+    setState({ table: { currentPage: 1 } });
 
-  if (state.rows.length === 0) {
-    state.filteredRows = [];
+    if (state.rows.length === 0) {
+      setState({ filteredRows: [] });
+      syncRangeControls();
+      syncSortIndicators();
+      setText(DOM.rangeSummary(), 'Date range: No records yet');
+      renderTable();
+      return;
+    }
+
+    setState({ filteredRows: getFilteredAndSortedRows(state.rows) });
+
     syncRangeControls();
     syncSortIndicators();
-    setText(DOM.rangeSummary(), 'Date range: No records yet');
+
+    setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
+
     renderTable();
-    return;
-  }
-
-  state.filteredRows = getFilteredAndSortedRows(state.rows);
-
-  syncRangeControls();
-  syncSortIndicators();
-
-  setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
-
-  renderTable();
+  });
 }
 
 function applySort(key) {
   if (!TABLE_SORT_LABELS[key]) return;
 
   if (state.table.sortKey === key) {
-    state.table.sortDir *= -1;
+    setState({ table: { sortDir: state.table.sortDir * -1 } });
   } else {
-    state.table.sortKey = key;
-    state.table.sortDir = 1;
+    setState({ table: { sortKey: key, sortDir: 1 } });
   }
 
   recomputeTableView();
@@ -1071,19 +983,18 @@ function applySortKey(key) {
     return;
   }
 
-  state.table.sortKey = key;
-  state.table.sortDir = 1;
+  setState({ table: { sortKey: key, sortDir: 1 } });
   recomputeTableView();
 }
 
 function toggleTableSortDirection() {
-  state.table.sortDir *= -1;
+  setState({ table: { sortDir: state.table.sortDir * -1 } });
   recomputeTableView();
 }
 
 function applyRangePreset(preset) {
   if (!['all', 'today', '7d', '30d'].includes(preset)) return;
-  state.exportRange.preset = preset;
+  setState({ exportRange: { preset } });
   recomputeTableView();
 }
 
@@ -1192,354 +1103,12 @@ function renderTable() {
 
   };  // end updateContent
 
-  // Delay content swap to let fade-out finish, then fade in
-  setTimeout(() => {
+  // Fade out → wait for transitionend → update → fade in
+  tbody.classList.add('is-fading');
+  tbody.addEventListener('transitionend', () => {
     updateContent();
     requestAnimationFrame(() => tbody.classList.remove('is-fading'));
-  }, 180);
-}
-
-function makeGradient(context, topColor, bottomColor, height = 220) {
-  const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, topColor);
-  gradient.addColorStop(1, bottomColor);
-  return gradient;
-}
-
-function initCharts() {
-  Chart.register(DONUT_LABEL_PLUGIN);
-  Chart.defaults.font.family = "'Instrument Sans', sans-serif";
-  Chart.defaults.color = '#5a6a72';
-  Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-
-  const lineChartAnimation = {
-    duration: 500,
-    easing: 'easeOutQuart',
-  };
-  const lineDecimation = {
-    enabled: true,
-    algorithm: 'lttb',
-    samples: CONFIG.chartMaxPoints,
-  };
-
-  const aqContext = byId('chart-aq').getContext('2d');
-  charts.aq = new Chart(aqContext, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: 'PM 2.5 (\u00b5g/m\u00b3)',
-          data: [],
-          borderColor: '#466370',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: makeGradient(aqContext, 'rgba(70,99,112,.15)', 'rgba(70,99,112,0)'),
-          tension: 0.45,
-          decimation: lineDecimation,
-        },
-        {
-          label: 'PM 10 (\u00b5g/m\u00b3)',
-          data: [],
-          borderColor: '#4a9da8',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: makeGradient(aqContext, 'rgba(74,157,168,.12)', 'rgba(74,157,168,0)'),
-          tension: 0.45,
-          decimation: lineDecimation,
-        },
-        {
-          label: 'WHO Limit',
-          data: [],
-          borderColor: 'rgba(93,94,97,.25)',
-          borderWidth: 1.5,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          fill: false,
-          tension: 0,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#fff',
-          titleColor: '#2a3439',
-          bodyColor: '#5a6a72',
-          borderColor: 'rgba(90,106,114,.12)',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 12,
-          callbacks: {
-            label: context => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          border: { display: false },
-          grid: { color: 'rgba(90,106,114,.07)' },
-          ticks: { maxTicksLimit: 6 },
-        },
-        y: {
-          border: { display: false },
-          grid: { color: 'rgba(90,106,114,.07)' },
-          ticks: { maxTicksLimit: 5 },
-          min: 0,
-          title: {
-            display: true,
-            text: '\u00b5g/m\u00b3',
-            color: '#5a6a72',
-            font: { size: 10 },
-          },
-        },
-      },
-      animation: lineChartAnimation,
-    },
-  });
-
-  const co2Context = byId('chart-co2').getContext('2d');
-  charts.co2 = new Chart(co2Context, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: 'CO2 (ppm)',
-          data: [],
-          borderColor: '#006977',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: makeGradient(co2Context, 'rgba(0,105,119,.15)', 'rgba(0,105,119,0)'),
-          tension: 0.45,
-          decimation: lineDecimation,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#fff',
-          titleColor: '#2a3439',
-          bodyColor: '#5a6a72',
-          borderColor: 'rgba(90,106,114,.12)',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 12,
-          callbacks: {
-            label: context => `CO2: ${Math.round(context.parsed.y)} ppm`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          border: { display: false },
-          grid: { color: 'rgba(0,0,0,.04)' },
-          ticks: { maxTicksLimit: 5 },
-        },
-        y: {
-          border: { display: false },
-          grid: { color: 'rgba(0,0,0,.04)' },
-          ticks: { maxTicksLimit: 5 },
-          title: {
-            display: true,
-            text: 'ppm',
-            color: '#5a6a72',
-            font: { size: 10 },
-          },
-        },
-      },
-      animation: lineChartAnimation,
-    },
-  });
-
-  const energyContext = byId('chart-energy').getContext('2d');
-  charts.energy = new Chart(energyContext, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: 'Voltage (V)',
-          data: [],
-          borderColor: '#5d5e61',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: false,
-          tension: 0.4,
-          decimation: lineDecimation,
-        },
-        {
-          label: 'Current (A)',
-          data: [],
-          borderColor: '#466370',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: false,
-          tension: 0.4,
-          decimation: lineDecimation,
-        },
-        {
-          label: 'Power (W)',
-          data: [],
-          borderColor: '#006977',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: makeGradient(energyContext, 'rgba(0,105,119,.08)', 'rgba(0,105,119,0)', 200),
-          tension: 0.4,
-          decimation: lineDecimation,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#fff',
-          titleColor: '#2a3439',
-          bodyColor: '#5a6a72',
-          borderColor: 'rgba(90,106,114,.12)',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 12,
-          callbacks: {
-            label: context => {
-              const value = context.parsed.y;
-              if (context.datasetIndex === 0) return `Voltage: ${Number(value).toFixed(1)} V`;
-              if (context.datasetIndex === 1) return `Current: ${Number(value).toFixed(2)} A`;
-              return `Power: ${Number(value).toFixed(1)} W`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          border: { display: false },
-          grid: { color: 'rgba(0,0,0,.04)' },
-          ticks: { maxTicksLimit: 6 },
-        },
-        y: {
-          border: { display: false },
-          grid: { color: 'rgba(0,0,0,.04)' },
-          ticks: { maxTicksLimit: 5 },
-        },
-      },
-      animation: lineChartAnimation,
-    },
-  });
-
-  const donutContext = byId('chart-donut').getContext('2d');
-  charts.donut = new Chart(donutContext, {
-    type: 'doughnut',
-    data: {
-      datasets: [
-        {
-          data: [0, 100],
-          backgroundColor: ['rgba(255,255,255,.7)', 'rgba(255,255,255,.12)'],
-          borderWidth: 0,
-          hoverOffset: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: false,
-      cutout: '68%',
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-      },
-      animation: { duration: 600 },
-    },
-  });
-}
-
-function getRowsForChartRange(rangeKey) {
-  const allRows = [...state.rows].reverse();
-  if (allRows.length === 0) return allRows;
-
-  if (rangeKey === '24h') return allRows.slice(-CONFIG.chartMaxPoints);
-
-  const latest = allRows[allRows.length - 1].time;
-  if (!(latest instanceof Date) || Number.isNaN(latest.getTime())) {
-    return allRows.slice(-CONFIG.chartMaxPoints);
-  }
-
-  const rangeMs = rangeKey === '1h' ? 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
-  const filtered = allRows.filter(row => latest.getTime() - row.time.getTime() <= rangeMs);
-  return filtered.slice(-CONFIG.chartMaxPoints);
-}
-
-function applyChartRange(rangeKey) {
-  state.chartRange = rangeKey;
-
-  DOM.chartTabs().forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.range === rangeKey);
-  });
-
-  const rows = getRowsForChartRange(rangeKey);
-  const labels = rows.map(row => formatTimeShort(row.time));
-  const hasSinglePoint = rows.length === 1;
-
-  const applyPointVisibility = dataset => {
-    if (!dataset) return;
-    dataset.pointRadius = hasSinglePoint ? 3.5 : 0;
-    dataset.pointHoverRadius = hasSinglePoint ? 5 : 3;
-    dataset.pointHitRadius = hasSinglePoint ? 12 : 8;
-  };
-
-  if (charts.aq) {
-    charts.aq.data.labels = labels;
-    charts.aq.data.datasets[0].data = rows.map(row => row.pm25);
-    charts.aq.data.datasets[1].data = rows.map(row => row.pm10);
-    charts.aq.data.datasets[2].data = Array(rows.length).fill(15);
-    charts.aq.data.datasets.forEach(applyPointVisibility);
-    charts.aq.update();
-  }
-
-  if (charts.co2) {
-    charts.co2.data.labels = labels;
-    charts.co2.data.datasets[0].data = rows.map(row => row.co2);
-    charts.co2.data.datasets.forEach(applyPointVisibility);
-    charts.co2.update();
-  }
-
-  if (charts.energy) {
-    charts.energy.data.labels = labels;
-    charts.energy.data.datasets[0].data = rows.map(row => row.volt);
-    charts.energy.data.datasets[1].data = rows.map(row => row.curr);
-    charts.energy.data.datasets[2].data = rows.map(row => row.pwr);
-    charts.energy.data.datasets.forEach(applyPointVisibility);
-    charts.energy.update();
-  }
-}
-
-function updateCharts() {
-  if (!state.rows.length) {
-    // à¸–à¹‰à¸²à¸¡à¸µ chart instance à¸­à¸¢à¸¹à¹ˆ à¹ƒà¸«à¹‰à¸¥à¹‰à¸²à¸‡ data
-    Object.values(charts || {}).forEach(chart => {
-      if (!chart) return;
-      chart.data.labels = [];
-      chart.data.datasets.forEach(ds => ds.data = []);
-      chart.update('none');
-    });
-    return;
-  }
-  applyChartRange(state.chartRange);
+  }, { once: true });
 }
 
 function getRefreshIntervalSeconds() {
@@ -1608,10 +1177,8 @@ function showSkeleton() {
     }
 
     element.style.transition = '';
-    element.style.opacity = '1';
+    element.style.opacity = '';
     element.parentElement?.classList.add('is-loading');
-    element.classList.add('visible');
-    if (element.id === 'sk-insight') element.classList.add('flex');
   });
 }
 
@@ -1620,16 +1187,15 @@ function hideSkeleton() {
     const pendingTimer = skeletonHideTimers.get(element);
     if (pendingTimer) clearTimeout(pendingTimer);
 
-    element.style.transition = 'opacity .3s ease';
+    element.style.transition = 'opacity .35s cubic-bezier(.22,.86,.32,1)';
     element.style.opacity = '0';
 
     const timer = setTimeout(() => {
       element.parentElement?.classList.remove('is-loading');
-      element.classList.remove('visible', 'flex');
       element.style.opacity = '';
       element.style.transition = '';
       skeletonHideTimers.delete(element);
-    }, 300);
+    }, 350);
 
     skeletonHideTimers.set(element, timer);
   });
@@ -1686,6 +1252,20 @@ const {
   showToast,
   sortRowsByTime,
 });
+
+const pdfPicker = createPdfDatePicker({
+  state,
+  DOM,
+  setText,
+  byId,
+  getRowsMatchingCurrentSearch,
+  sortRowsByTime,
+  getFriendlyPdfRangeLabel,
+  formatEntryCount,
+  formatPdfMetric,
+  TXT,
+});
+
 function tickClock() {
   const now = new Date();
   setText(DOM.heroClock(), DATE_FORMATTERS.heroClock.format(now));
@@ -1693,6 +1273,8 @@ function tickClock() {
 }
 
 const manualRefresh = createManualRefresh({ state, fetchSheet });
+
+let isScrollingFromNav = false;
 
 function setActiveNavLink(hash) {
   const normalizedHash = hash || '#main-content';
@@ -1729,11 +1311,13 @@ function moveNavIndicator(activeLink) {
     menu.appendChild(navIndicator);
   }
 
-  const menuRect = menu.getBoundingClientRect();
-  const linkRect = activeLink.getBoundingClientRect();
+  requestAnimationFrame(() => {
+    const menuRect = menu.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
 
-  navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
-  navIndicator.style.height = `${linkRect.height}px`;
+    navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
+    navIndicator.style.height = `${linkRect.height}px`;
+  });
 }
 
 let navSelectionLockHash = null;
@@ -1846,13 +1430,25 @@ function bindSidebarNavigation() {
       if (!target) return;
 
       event.preventDefault();
-      navigateToSidebarSection(hash);
+      
+      // ล็อกตัวแปรเพื่อสยบอาการสั่น และย้ายตำแหน่งวาร์ป Indicator ไปดักรอทันที
+      isScrollingFromNav = true;
+      setActiveNavLink(hash); 
+      
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', hash);
+      
+      // คลายล็อกเมื่อสกรอลล์หน้าจอเสร็จสิ้นอย่างสมบูรณ์
+      setTimeout(() => { isScrollingFromNav = false; }, 850);
     });
   });
 
   let scrollSpyFrame = null;
   const scheduleScrollSpyUpdate = () => {
-    if (navSelectionLockHash || scrollSpyFrame) return;
+    // ถ้าคลิกมาจากเมนู ให้ข้ามการคำนวณสกรอลล์ชั่วคราวเพื่อป้องกันเมนูดึดกระตุก
+    if (isScrollingFromNav || navSelectionLockHash) return; 
+    
+    if (scrollSpyFrame) return;
     scrollSpyFrame = requestAnimationFrame(() => {
       pickActiveSectionFromScroll();
       scrollSpyFrame = null;
@@ -1926,7 +1522,7 @@ function bindEvents() {
   byId('btn-modal-confirm')?.addEventListener('click', async () => {
     if (byId('btn-modal-confirm')?.disabled) return;
 
-    const selection = getPdfModalSelection();
+    const selection = pdfPicker.getPdfModalSelection();
     setPdfExportBusy(true);
 
     try {
@@ -1943,67 +1539,7 @@ function bindEvents() {
     }
   });
 
-  DOM.pdfDateFieldButtons().forEach(button => {
-    button.addEventListener('click', () => {
-      const value = button.dataset.pdfField === 'to'
-        ? DOM.pdfDateTo()?.value
-        : DOM.pdfDateFrom()?.value;
-
-      if (!value) return;
-
-      syncPdfPresetButtons(null);
-      setPdfModalDates(value, value, {
-        anchorValue: value,
-        pendingAnchor: value,
-      });
-    });
-  });
-
-  DOM.btnPdfPrevMonth()?.addEventListener('click', () => {
-    state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), -1);
-    renderPdfCalendar();
-  });
-
-  DOM.btnPdfNextMonth()?.addEventListener('click', () => {
-    state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), 1);
-    renderPdfCalendar();
-  });
-
-  DOM.pdfCalendarMonths()?.addEventListener('pointerdown', event => {
-    const button = event.target.closest('.pdf-day[data-date]');
-    if (!button) return;
-    beginPdfCalendarDrag(button.dataset.date);
-  });
-
-  DOM.pdfCalendarMonths()?.addEventListener('pointerover', event => {
-    const button = event.target.closest('.pdf-day[data-date]');
-    if (!button) return;
-    updatePdfCalendarDrag(button.dataset.date);
-  });
-
-  DOM.pdfCalendarMonths()?.addEventListener('pointermove', event => {
-    if (!state.pdfPicker.drag.active) return;
-    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest('.pdf-day[data-date]');
-    if (!hovered) return;
-    updatePdfCalendarDrag(hovered.dataset.date);
-  });
-
-  DOM.pdfCalendarMonths()?.addEventListener('click', event => {
-    const button = event.target.closest('.pdf-day[data-date]');
-    if (!button) return;
-    if (state.pdfPicker.suppressClick) {
-      clearPdfClickSuppression();
-      return;
-    }
-    handlePdfCalendarDateSelection(button.dataset.date);
-  });
-
-  window.addEventListener('pointerup', finishPdfCalendarDrag);
-  window.addEventListener('pointercancel', cancelPdfCalendarDrag);
-
-  DOM.pdfPresetButtons().forEach(btn => {
-    btn.addEventListener('click', () => applyPdfPreset(btn.dataset.pdfPreset));
-  });
+  pdfPicker.bindCalendarEvents();
 
   DOM.tableSearch()?.addEventListener('input', recomputeTableView);
 
@@ -2023,39 +1559,28 @@ function bindEvents() {
 
   DOM.btnPrev()?.addEventListener('click', () => {
     if (state.table.currentPage > 1) {
-      state.table.currentPage -= 1;
-      renderTable();
+      setState({ table: { currentPage: state.table.currentPage - 1 } });
     }
   });
 
   DOM.btnNext()?.addEventListener('click', () => {
     const totalPages = Math.ceil(state.filteredRows.length / CONFIG.rowsPerPage);
     if (state.table.currentPage < totalPages) {
-      state.table.currentPage += 1;
-      renderTable();
+      setState({ table: { currentPage: state.table.currentPage + 1 } });
     }
   });
 
   DOM.pageNumbers()?.addEventListener('click', event => {
     const button = event.target.closest('.page-btn[data-page]');
     if (!button) return;
-    state.table.currentPage = Number(button.dataset.page);
-    renderTable();
+    setState({ table: { currentPage: Number(button.dataset.page) } });
   });
 
   DOM.chartTabs().forEach(tab => {
-    tab.addEventListener('click', () => applyChartRange(tab.dataset.range));
+    tab.addEventListener('click', () => applyChartRange(tab.dataset.range, state, DOM, formatTimeShort));
   });
 
   DOM.btnErrorRetry()?.addEventListener('click', manualRefresh);
-}
-
-function resizeAllCharts() {
-  Object.values(charts).forEach(chart => {
-    if (!chart) return;
-    chart.resize();
-    chart.update('none');
-  });
 }
 
 export function initApp() {
@@ -2072,7 +1597,7 @@ export function initApp() {
   tickClock();
   setInterval(tickClock, 1000);
 
-  initCharts();
+  initCharts(byId, state);
   bindEvents();
 
   syncRangeControls();
@@ -2093,66 +1618,6 @@ export function initApp() {
 
   // ── Hero Parallax ─────────────────────────────────────────
   initHeroParallax();
-
-  // ── Smooth Mouse Wheel ────────────────────────────────────
-  initSmoothWheel();
-}
-
-// ── Smooth Wheel Scroll (lerp-based) ────────────────────────
-function initSmoothWheel() {
-  // Skip on touch-only devices
-  if ('ontouchstart' in window && !window.matchMedia('(pointer: fine)').matches) return;
-
-  let current = window.scrollY;
-  let target = window.scrollY;
-  let animating = false;
-  const LERP = 0.07;        // Lower = smoother (0.05 ultra smooth, 0.1 snappy)
-  const MULTIPLIER = 1.2;   // Compensate for smoothing lag
-
-  console.log('[Atmosfera] Smooth wheel scroll initialized');
-
-  window.addEventListener('wheel', (e) => {
-    // Don't intercept horizontal scroll or zooming
-    if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-
-    e.preventDefault();
-
-    // Sync current position on first wheel after idle
-    if (!animating) {
-      current = window.scrollY;
-      target = current;
-    }
-
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    target = Math.max(0, Math.min(target + e.deltaY * MULTIPLIER, maxScroll));
-
-    if (!animating) {
-      animating = true;
-      requestAnimationFrame(tick);
-    }
-  }, { passive: false });
-
-  function tick() {
-    current += (target - current) * LERP;
-
-    if (Math.abs(current - target) < 0.5) {
-      current = target;
-      window.scrollTo(0, current);
-      animating = false;
-      return;
-    }
-
-    window.scrollTo(0, current);
-    requestAnimationFrame(tick);
-  }
-
-  // Sync when user scrolls via keyboard or scrollbar drag (not during animation)
-  window.addEventListener('scroll', () => {
-    if (!animating) {
-      current = window.scrollY;
-      target = window.scrollY;
-    }
-  }, { passive: true });
 }
 
 function initScrollReveal() {
@@ -2165,8 +1630,8 @@ function initScrollReveal() {
   // Set initial hidden state
   revealTargets.forEach(el => {
     el.style.opacity = '0';
-    el.style.transform = 'translateY(24px)';
-    el.style.transition = 'opacity .65s cubic-bezier(.22,.86,.32,1), transform .65s cubic-bezier(.22,.86,.32,1)';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity .45s cubic-bezier(.22,.86,.32,1), transform .45s cubic-bezier(.22,.86,.32,1)';
   });
 
   const observer = new IntersectionObserver(
@@ -2178,13 +1643,12 @@ function initScrollReveal() {
         const parent = el.parentElement;
         const siblings = parent ? [...parent.children].filter(c => revealSet.has(c)) : [];
         const idx = siblings.indexOf(el);
-        const delay = idx >= 0 ? idx * 80 : 0;
+        const delay = idx >= 0 ? idx * 40 : 0;
 
         setTimeout(() => {
           el.style.opacity = '1';
           el.style.transform = 'translateY(0)';
 
-          // After transition ends, remove inline styles so CSS hover can work
           el.addEventListener('transitionend', () => {
             el.style.removeProperty('opacity');
             el.style.removeProperty('transform');
@@ -2195,7 +1659,7 @@ function initScrollReveal() {
         observer.unobserve(el);
       });
     },
-    { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    { threshold: 0.12, rootMargin: '0px 0px -20px 0px' }
   );
 
   revealTargets.forEach(el => observer.observe(el));
@@ -2221,247 +1685,15 @@ function initHeroParallax() {
   }, { passive: true });
 }
 
-// â”€â”€ PDF MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function getPdfPickerViewDate() {
-  if (state.pdfPicker.viewDate instanceof Date && !Number.isNaN(state.pdfPicker.viewDate.getTime())) {
-    return startOfMonth(state.pdfPicker.viewDate);
-  }
-
-  const anchorDate = parseDateInputValue(DOM.pdfDateFrom()?.value)
-    ?? parseDateInputValue(DOM.pdfDateTo()?.value)
-    ?? new Date();
-
-  return startOfMonth(anchorDate);
-}
-
-function syncPdfDateCards() {
-  setText(DOM.pdfDateFromDisplay(), formatPdfDisplayDate(DOM.pdfDateFrom()?.value));
-  setText(DOM.pdfDateToDisplay(), formatPdfDisplayDate(DOM.pdfDateTo()?.value));
-
-  const activeField = state.pdfPicker.pendingAnchor ? 'to' : 'from';
-  DOM.pdfDateFieldButtons().forEach(button => {
-    button.classList.toggle('active', button.dataset.pdfField === activeField);
-  });
-}
-
-function renderPdfCalendarMonth(monthDate, fromDate, toDate) {
-  const monthStart = startOfMonth(monthDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const calendarSlots = 42;
-
-  const nextMonth = addMonths(monthStart, 1);
-  const lastDayOfMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 0).getDate();
-  const leadingDays = getCalendarWeekdayIndex(monthStart);
-
-  const weekdayRow = PDF_WEEKDAY_LABELS.map(label => `<span>${label}</span>`).join('');
-  const dayCells = [];
-
-  for (let index = 0; index < leadingDays; index += 1) {
-    dayCells.push('<span class="pdf-day-spacer" aria-hidden="true"></span>');
-  }
-
-  for (let day = 1; day <= lastDayOfMonth; day += 1) {
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-    const dateValue = formatDateInputValue(date);
-    const isToday = isSameDay(date, today);
-    const isStart = Boolean(fromDate) && isSameDay(date, fromDate);
-    const isEnd = Boolean(toDate) && isSameDay(date, toDate);
-    const isInRange = Boolean(fromDate && toDate && date > fromDate && date < toDate);
-    const classes = ['pdf-day'];
-
-    if (isToday) classes.push('is-today');
-    if (isInRange) classes.push('is-in-range');
-    if (isStart || isEnd) classes.push('is-edge');
-
-    dayCells.push(`
-      <button
-        class="${classes.join(' ')}"
-        type="button"
-        data-date="${dateValue}"
-        aria-label="${DATE_FORMATTERS.pdfDisplay.format(date)}"
-      >${day}</button>
-    `);
-  }
-
-  while (dayCells.length < calendarSlots) {
-    dayCells.push('<span class="pdf-day-spacer" aria-hidden="true"></span>');
-  }
-
-  return `
-    <section class="pdf-calendar-month">
-      <div class="pdf-calendar-month-label">${DATE_FORMATTERS.pdfMonth.format(monthStart)}</div>
-      <div class="pdf-calendar-weekdays">${weekdayRow}</div>
-      <div class="pdf-calendar-days">${dayCells.join('')}</div>
-    </section>
-  `;
-}
-
-function renderPdfCalendar() {
-  const viewDate = getPdfPickerViewDate();
-  const isMobile = window.innerWidth < 600;
-  const nextMonth = addMonths(viewDate, 1);
-  const { fromDate, toDate } = getPdfCalendarVisualRange();
-
-  state.pdfPicker.viewDate = viewDate;
-
-  // On mobile show only the current month in the title; on desktop show both.
-  const titleText = isMobile
-    ? DATE_FORMATTERS.pdfMonth.format(viewDate)
-    : `${DATE_FORMATTERS.pdfMonth.format(viewDate)} \u2014 ${DATE_FORMATTERS.pdfMonth.format(nextMonth)}`;
-
-  setText(DOM.pdfCalendarTitle(), titleText);
-  setText(
-    DOM.pdfCalendarSubtitle(),
-    state.pdfPicker.drag.active
-      ? 'Release to confirm the range.'
-      : state.pdfPicker.pendingAnchor
-        ? 'Tap another date to extend the range.'
-        : 'Tap one date or drag across days.'
-  );
-
-  const months = DOM.pdfCalendarMonths();
-  if (!months) return;
-
-  if (isMobile) {
-    // Single-month layout: render only the current view month.
-    months.innerHTML = renderPdfCalendarMonth(viewDate, fromDate, toDate);
-  } else {
-    // Two-month layout: render current + next month side by side.
-    months.innerHTML = [viewDate, nextMonth]
-      .map(monthDate => renderPdfCalendarMonth(monthDate, fromDate, toDate))
-      .join('');
-  }
-}
-
-function cancelScheduledPdfCalendarRender() {
-  if (!state.pdfPicker.renderFrame) return;
-  cancelAnimationFrame(state.pdfPicker.renderFrame);
-  state.pdfPicker.renderFrame = 0;
-}
-
-function schedulePdfCalendarRender() {
-  if (state.pdfPicker.renderFrame) return;
-
-  state.pdfPicker.renderFrame = requestAnimationFrame(() => {
-    state.pdfPicker.renderFrame = 0;
-    renderPdfCalendar();
-  });
-}
-
-function refreshPdfPickerUi() {
-  syncPdfDateCards();
-  cancelScheduledPdfCalendarRender();
-  renderPdfCalendar();
-  updatePdfModalSummary();
-}
-
-function setPdfModalDates(fromValue, toValue, options = {}) {
-  const {
-    anchorValue = fromValue || toValue,
-    pendingAnchor = '',
-  } = options;
-
-  const fromInput = DOM.pdfDateFrom();
-  const toInput = DOM.pdfDateTo();
-  if (fromInput) fromInput.value = fromValue || '';
-  if (toInput) toInput.value = toValue || '';
-
-  state.pdfPicker.activeField = pendingAnchor ? 'to' : 'from';
-  state.pdfPicker.pendingAnchor = pendingAnchor || '';
-  state.pdfPicker.viewDate = startOfMonth(
-    parseDateInputValue(anchorValue)
-    ?? parseDateInputValue(fromValue)
-    ?? parseDateInputValue(toValue)
-    ?? new Date()
-  );
-  resetPdfDragState();
-
-  refreshPdfPickerUi();
-}
-
-function handlePdfCalendarDateSelection(value) {
-  const pendingAnchor = state.pdfPicker.pendingAnchor;
-
-  if (pendingAnchor) {
-    const [nextFrom, nextTo] = getOrderedDateValues(pendingAnchor, value);
-    syncPdfPresetButtons(null);
-    setPdfModalDates(nextFrom, nextTo, {
-      anchorValue: nextFrom,
-      pendingAnchor: '',
-    });
-    return;
-  }
-
-  syncPdfPresetButtons(null);
-  setPdfModalDates(value, value, {
-    anchorValue: value,
-    pendingAnchor: value,
-  });
-}
-
-function beginPdfCalendarDrag(value) {
-  if (!value) return;
-  clearPdfClickSuppression();
-  resetPdfPendingAnchor();
-  state.pdfPicker.drag = {
-    active: true,
-    anchor: value,
-    current: value,
-    moved: false,
-  };
-  syncPdfPresetButtons(null);
-  renderPdfCalendar();
-}
-
-function updatePdfCalendarDrag(value) {
-  if (!state.pdfPicker.drag.active || !value) return;
-  if (value === state.pdfPicker.drag.current) return;
-
-  state.pdfPicker.drag.current = value;
-  state.pdfPicker.drag.moved = true;
-  schedulePdfCalendarRender();
-}
-
-function finishPdfCalendarDrag() {
-  if (!state.pdfPicker.drag.active) return;
-
-  const {
-    anchor,
-    current,
-    moved,
-  } = state.pdfPicker.drag;
-
-  if (!moved) {
-    resetPdfDragState();
-    return;
-  }
-
-  armPdfClickSuppression();
-  cancelScheduledPdfCalendarRender();
-  const [fromValue, toValue] = getOrderedDateValues(anchor, current || anchor);
-  setPdfModalDates(fromValue, toValue, {
-    anchorValue: fromValue,
-    pendingAnchor: '',
-  });
-}
-
-function cancelPdfCalendarDrag() {
-  if (!state.pdfPicker.drag.active) return;
-  cancelScheduledPdfCalendarRender();
-  resetPdfDragState();
-}
-
 function openPdfModal() {
   const preset = ['all', 'today', '7d', '30d'].includes(state.exportRange.preset)
     ? state.exportRange.preset
     : 'all';
   const { fromValue, toValue } = getDateValuesForPreset(preset);
 
-  resetPdfDragState();
+  pdfPicker.resetPdfDragState();
   setPdfExportBusy(false);
-  setPdfModalDates(
+  pdfPicker.setPdfModalDates(
     fromValue,
     toValue,
     {
@@ -2469,7 +1701,7 @@ function openPdfModal() {
       pendingAnchor: '',
     }
   );
-  syncPdfPresetButtons(preset);
+  pdfPicker.syncPdfPresetButtons(preset);
 
   const modal = byId('modal-pdf');
   if (modal) {
@@ -2504,9 +1736,9 @@ function closePdfModal() {
     setTimeout(() => { if (!modal.hidden) modal.hidden = true; }, 400);
   }
 
-  cancelScheduledPdfCalendarRender();
-  resetPdfDragState();
-  resetPdfPendingAnchor();
+  pdfPicker.cancelScheduledPdfCalendarRender();
+  pdfPicker.resetPdfDragState();
+  pdfPicker.resetPdfPendingAnchor();
   document.body.style.overflow = ''; // à¸„à¸·à¸™ scroll
 
   if (lastFocusedElementBeforeModal instanceof HTMLElement) {
@@ -2548,130 +1780,13 @@ function handlePdfModalKeydown(event) {
   }
 }
 
-function getPdfModalSelection() {
-  const fromVal = DOM.pdfDateFrom()?.value;
-  const toVal = DOM.pdfDateTo()?.value;
-  const baseRows = getRowsMatchingCurrentSearch(state.rows);
-
-  if (!fromVal || !toVal) {
-    return {
-      rows: sortRowsByTime(baseRows, 'asc'),
-      rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
-      fromValue: fromVal || '',
-      toValue: toVal || '',
-    };
-  }
-
-  const from = parseDateInputValue(fromVal);
-  const to = parseDateInputValue(toVal);
-  if (!from || !to) {
-    return {
-      rows: sortRowsByTime(baseRows, 'asc'),
-      rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
-      fromValue: fromVal || '',
-      toValue: toVal || '',
-    };
-  }
-
-  to.setHours(23, 59, 59, 999);
-
-  return {
-    rows: sortRowsByTime(baseRows.filter(row => row.time >= from && row.time <= to), 'asc'),
-    rangeLabel: getFriendlyPdfRangeLabel(fromVal, toVal),
-    fromValue: fromVal,
-    toValue: toVal,
-  };
-}
-
-function getPdfModalRows() {
-  return getPdfModalSelection().rows;
-}
-
-function updatePdfHealthSummary(rows) {
-  if (!rows.length) {
-    setText(DOM.pdfHealthPm25(), TXT.emDash);
-    setText(DOM.pdfHealthCo2(), TXT.emDash);
-    setText(DOM.pdfHealthEnergy(), TXT.emDash);
-    return;
-  }
-
-  const avgPm25 = rows.reduce((sum, row) => sum + row.pm25, 0) / rows.length;
-  const maxCo2 = rows.reduce((max, row) => Math.max(max, row.co2), 0);
-  // PZEM-004T reports cumulative kWh; actual consumption = max − min
-  const energyValues = rows.map(row => row.energy).filter(Number.isFinite);
-  const totalEnergy = energyValues.length > 0
-    ? Math.max(...energyValues) - Math.min(...energyValues)
-    : 0;
-
-  setText(DOM.pdfHealthPm25(), formatPdfMetric(avgPm25, 1, TXT.microgPerM3));
-  setText(DOM.pdfHealthCo2(), formatPdfMetric(maxCo2, 0, 'ppm'));
-  setText(DOM.pdfHealthEnergy(), formatPdfMetric(totalEnergy, 2, 'kWh'));
-}
-
-function updatePdfModalSummary() {
-  const { rows, rangeLabel } = getPdfModalSelection();
-  const summary = byId('pdf-modal-summary');
-
-  updatePdfHealthSummary(rows);
-  if (!summary) return;
-
-  const fromVal = DOM.pdfDateFrom()?.value;
-  const toVal = DOM.pdfDateTo()?.value;
-
-  if (!fromVal || !toVal) {
-    summary.textContent = `All matching records ${TXT.emDash} ${formatEntryCount(rows.length)}`;
-    return;
-  }
-
-  if (rows.length === 0) {
-    summary.textContent = 'No records found in this date range';
-    return;
-  }
-
-  summary.textContent = `${rangeLabel} ${TXT.emDash} ${formatEntryCount(rows.length)}`;
-}
-
-function syncPdfPresetButtons(activePreset) {
-  DOM.pdfPresetButtons().forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.pdfPreset === activePreset);
-  });
-}
-
-function applyPdfPreset(preset) {
-  const today = new Date();
-  const from = new Date(today);
-  const to = formatDateInputValue(today);
-
-  if (preset === 'today') {
-    setPdfModalDates(to, to, { anchorValue: to, pendingAnchor: '' });
-  } else if (preset === '7d') {
-    from.setDate(from.getDate() - 6);
-    setPdfModalDates(formatDateInputValue(from), to, {
-      anchorValue: formatDateInputValue(from),
-      pendingAnchor: '',
-    });
-  } else if (preset === '30d') {
-    from.setDate(from.getDate() - 29);
-    setPdfModalDates(formatDateInputValue(from), to, {
-      anchorValue: formatDateInputValue(from),
-      pendingAnchor: '',
-    });
-  } else {
-    setPdfModalDates('', '', { anchorValue: formatDateInputValue(today), pendingAnchor: '' });
-  }
-
-  syncPdfPresetButtons(preset); // highlight à¸—à¸µà¹ˆà¹€à¸¥à¸·à¸­à¸
-}
-
 let resizeTimer = null;
 
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     resizeAllCharts();
-    // Re-render PDF calendar to switch between 1-month (mobile) and 2-month layouts
-    const modal = byId('modal-pdf');
-    if (modal && !modal.hidden) renderPdfCalendar();
+    pdfPicker.handleResize();
   }, 120);
 });
 
