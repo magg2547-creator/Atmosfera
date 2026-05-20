@@ -1303,7 +1303,6 @@ function moveNavIndicator(activeLink) {
   const menu = activeLink.closest('.nav-menu');
   if (!menu) return;
 
-  // Create indicator on first call
   if (!navIndicator) {
     navIndicator = document.createElement('div');
     navIndicator.className = 'nav-indicator';
@@ -1311,13 +1310,12 @@ function moveNavIndicator(activeLink) {
     menu.appendChild(navIndicator);
   }
 
-  requestAnimationFrame(() => {
-    const menuRect = menu.getBoundingClientRect();
-    const linkRect = activeLink.getBoundingClientRect();
+  // อัปเดตทันทีแบบ synchronous เพื่อความตอบสนองที่ไร้ดีเลย์
+  const menuRect = menu.getBoundingClientRect();
+  const linkRect = activeLink.getBoundingClientRect();
 
-    navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
-    navIndicator.style.height = `${linkRect.height}px`;
-  });
+  navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
+  navIndicator.style.height = `${linkRect.height}px`;
 }
 
 let navSelectionLockHash = null;
@@ -1396,13 +1394,120 @@ function syncActiveNavLink() {
   pickActiveSectionFromScroll();
 }
 
+// ── Custom Smooth Scroll Engine (Lerp-based) ────────────────
+const smoothScrollEngine = (() => {
+  const LERP_FACTOR = 0.06;
+  const SNAP_THRESHOLD = 0.5;
+  const TRACKPAD_AVG_DELTA = 28;
+  const TRACKPAD_WINDOW_MS = 250;
+  const TRACKPAD_MIN_EVENTS = 3;
+  const SCROLL_PADDING = 80;
+
+  let currentY = window.scrollY;
+  let targetY = window.scrollY;
+  let rafId = null;
+  let recentDeltas = [];
+  let activeNavLink = null;
+
+  function isTrackpad() {
+    const now = performance.now();
+    recentDeltas = recentDeltas.filter(d => now - d.time < TRACKPAD_WINDOW_MS);
+    if (recentDeltas.length < TRACKPAD_MIN_EVENTS) return false;
+    const avg = recentDeltas.reduce((sum, d) => sum + Math.abs(d.value), 0) / recentDeltas.length;
+    return avg < TRACKPAD_AVG_DELTA;
+  }
+
+  function getMaxScroll() {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * LERP_FACTOR;
+
+    if (Math.abs(currentY - targetY) < SNAP_THRESHOLD) {
+      currentY = targetY;
+      window.scrollTo(0, currentY);
+      rafId = null;
+      return;
+    }
+
+    window.scrollTo(0, currentY);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startAnimation() {
+    targetY = Math.max(0, Math.min(targetY, getMaxScroll()));
+    if (!rafId) {
+      currentY = window.scrollY;
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  // Wheel handler
+  function onWheel(e) {
+    if (e.ctrlKey || e.metaKey) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    recentDeltas.push({ value: e.deltaY, time: performance.now() });
+
+    if (isTrackpad()) return;
+
+    e.preventDefault();
+    targetY += e.deltaY * 1.15;
+    startAnimation();
+  }
+
+  // Sync on native scroll (keyboard, scrollbar drag, trackpad)
+  function onNativeScroll() {
+    if (!rafId) {
+      currentY = window.scrollY;
+      targetY = window.scrollY;
+    }
+  }
+
+  function init() {
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('scroll', onNativeScroll, { passive: true });
+  }
+
+  function scrollTo(element) {
+    if (!element) return;
+    const rect = element.getBoundingClientRect();
+    targetY = window.scrollY + rect.top - SCROLL_PADDING;
+    startAnimation();
+  }
+
+  function setActiveLink(link) {
+    activeNavLink = link;
+  }
+
+  function getTargetY() {
+    return targetY;
+  }
+
+  function isAnimating() {
+    return rafId !== null;
+  }
+
+  function destroy() {
+    window.removeEventListener('wheel', onWheel);
+    window.removeEventListener('scroll', onNativeScroll);
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    recentDeltas = [];
+    activeNavLink = null;
+  }
+
+  return { init, scrollTo, setActiveLink, destroy, getTargetY, isAnimating };
+})();
+
 function navigateToSidebarSection(hash) {
   const target = document.querySelector(hash);
   if (!target) return;
 
   navSelectionLockHash = hash;
   setActiveNavLink(hash);
-  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  smoothScrollEngine.scrollTo(target);
   history.replaceState(null, '', hash);
   scheduleNavSelectionUnlock(900);
 }
@@ -1430,24 +1535,21 @@ function bindSidebarNavigation() {
       if (!target) return;
 
       event.preventDefault();
-      
-      // ล็อกตัวแปรเพื่อสยบอาการสั่น และย้ายตำแหน่งวาร์ป Indicator ไปดักรอทันที
+
       isScrollingFromNav = true;
-      setActiveNavLink(hash); 
-      
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveNavLink(hash);
+      smoothScrollEngine.setActiveLink(link);
+      smoothScrollEngine.scrollTo(target);
       history.replaceState(null, '', hash);
-      
-      // คลายล็อกเมื่อสกรอลล์หน้าจอเสร็จสิ้นอย่างสมบูรณ์
+
       setTimeout(() => { isScrollingFromNav = false; }, 850);
     });
   });
 
   let scrollSpyFrame = null;
   const scheduleScrollSpyUpdate = () => {
-    // ถ้าคลิกมาจากเมนู ให้ข้ามการคำนวณสกรอลล์ชั่วคราวเพื่อป้องกันเมนูดึดกระตุก
-    if (isScrollingFromNav || navSelectionLockHash) return; 
-    
+    if (isScrollingFromNav || navSelectionLockHash) return;
+
     if (scrollSpyFrame) return;
     scrollSpyFrame = requestAnimationFrame(() => {
       pickActiveSectionFromScroll();
@@ -1599,6 +1701,7 @@ export function initApp() {
 
   initCharts(byId, state);
   bindEvents();
+  smoothScrollEngine.init();
 
   syncRangeControls();
   syncSortIndicators();

@@ -57,7 +57,7 @@
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+html { scroll-behavior: auto !important; scroll-padding-top: 80px; }
 html.is-booting { scroll-behavior: auto !important; }
 html.is-scrolling {
   --glass-backdrop: none;
@@ -1029,7 +1029,25 @@ nav {
   flex-wrap: wrap;
   line-height: 1.45;
 }
-.table-scroll  { overflow-x: auto; margin-top: var(--sp2); }
+.table-scroll {
+  overflow-x: auto;
+  margin-top: var(--sp2);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  will-change: scroll-position;
+}
+.table-scroll::-webkit-scrollbar { height: 6px; }
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(90, 106, 114, 0.12);
+  border-radius: 999px;
+  transition: background 0.25s ease;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 106, 114, 0.28);
+}
+.table-scroll { scrollbar-width: thin; scrollbar-color: rgba(90, 106, 114, 0.12) transparent; }
 table { width: 100%; }
 .records-table {
   --records-value-offset: 14px;
@@ -1123,7 +1141,7 @@ thead th.sorted[data-sort-dir='desc'] .sort-icon::after {
   background: linear-gradient(160deg, rgba(255,255,255,.38), rgba(235,244,246,.18));
   border-top: 1px solid rgba(255,255,255,.42);
   border-bottom: 1px solid rgba(255,255,255,.20);
-  transition: background .18s ease, transform .18s ease, border-color .18s ease;
+  transition: background 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .records-table tbody tr:hover td {
   background: linear-gradient(160deg, rgba(255,255,255,.50), rgba(238,246,248,.24));
@@ -1255,7 +1273,7 @@ footer { padding: var(--sp8) 0; display: flex; justify-content: space-between; a
 
 /* ── TABLE BODY TRANSITION ── */
 #table-body {
-  transition: opacity .2s ease;
+  transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 #table-body.is-fading {
   opacity: 0;
