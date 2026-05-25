@@ -1438,7 +1438,7 @@ function navigateToSidebarSection(hash) {
   setActiveNavLink(hash);
   smoothScrollEngine.scrollTo(target);
   history.replaceState(null, '', hash);
-  scheduleNavSelectionUnlock(900);
+  scheduleNavSelectionUnlock(1200);
 }
 
 function bindScrollPerf() {
@@ -1460,18 +1460,8 @@ function bindSidebarNavigation() {
   document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
     link.addEventListener('click', event => {
       const hash = link.getAttribute('href');
-      const target = document.querySelector(hash);
-      if (!target) return;
-
       event.preventDefault();
-
-      isScrollingFromNav = true;
-      setActiveNavLink(hash);
-      smoothScrollEngine.setActiveLink(link);
-      smoothScrollEngine.scrollTo(target);
-      history.replaceState(null, '', hash);
-
-      setTimeout(() => { isScrollingFromNav = false; }, 850);
+      navigateToSidebarSection(hash);
     });
   });
 
