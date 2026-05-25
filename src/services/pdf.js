@@ -1,3 +1,20 @@
+let _jsPDFLoaded = false;
+
+async function ensureJsPDF() {
+  if (_jsPDFLoaded || typeof window.jspdf !== 'undefined') {
+    _jsPDFLoaded = true;
+    return;
+  }
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js';
+    script.crossOrigin = 'anonymous';
+    script.onload = () => { _jsPDFLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('Failed to load jsPDF'));
+    document.head.appendChild(script);
+  });
+}
+
 export function createPdfService(context) {
   const {
     byId,
@@ -117,7 +134,9 @@ function exportAllCSV() {
   showToast(`CSV ready (${rows.length} rows)`);
 }
 
-function exportPDF(rows, options = {}) {
+async function exportPDF(rows, options = {}) {
+  await ensureJsPDF();
+
   if (!Array.isArray(rows)) {
     options = rows ?? {};
     rows = getExportRows();

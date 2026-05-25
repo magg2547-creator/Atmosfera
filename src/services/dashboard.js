@@ -968,6 +968,14 @@ function applySort(key) {
   }
 
   recomputeTableView();
+
+  // Update aria-sort for screen readers
+  document.querySelectorAll('thead th[aria-sort]')
+    .forEach(th => th.setAttribute('aria-sort', 'none'));
+  const activeTh = document.getElementById(`th-${state.table.sortKey}`);
+  if (activeTh) {
+    activeTh.setAttribute('aria-sort', state.table.sortDir === 1 ? 'descending' : 'ascending');
+  }
 }
 
 function applySortKey(key) {
@@ -1598,7 +1606,12 @@ function bindEvents() {
   });
 
   DOM.chartTabs().forEach(tab => {
-    tab.addEventListener('click', () => applyChartRange(tab.dataset.range, state, DOM, formatTimeShort, setState));
+    tab.addEventListener('click', () => {
+      applyChartRange(tab.dataset.range, state, DOM, formatTimeShort, setState);
+      // Update aria-pressed for screen readers
+      DOM.chartTabs().forEach(btn => btn.setAttribute('aria-pressed', 'false'));
+      tab.setAttribute('aria-pressed', 'true');
+    });
   });
 
   DOM.btnErrorRetry()?.addEventListener('click', manualRefresh);

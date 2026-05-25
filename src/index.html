@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atmosfera - Air &amp; Energy Monitor</title>
+<meta name="description" content="Real-time air quality and energy monitoring dashboard. Tracks PM2.5, PM10, CO2, temperature, humidity, voltage, current, and power consumption.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://atmosfera.vercel.app/">
+
+<meta property="og:title" content="Atmosfera — Air &amp; Energy Monitor">
+<meta property="og:description" content="Real-time sensor dashboard for air quality and energy monitoring.">
+<meta property="og:image" content="https://atmosfera.vercel.app/assets/favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://atmosfera.vercel.app/">
+
+<link rel="preload" as="font" type="font/woff2" crossorigin
+  href="https://fonts.gstatic.com/s/sora/v12/xMQbvZFLi7wbFZnBaoBMPw.woff2">
 <script>
   document.documentElement.classList.add('is-booting');
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -15,7 +27,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+  integrity="sha384-fVHMv9PgSABPOTKUKFBTmvMpzMdRBJCDZvvxZINHIBD72NlyB0Z4IqtBJAyMN10"
+  crossorigin="anonymous"
+  defer></script>
 <link rel="stylesheet" href="/src/style.css">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
@@ -163,7 +178,7 @@
     </svg>
   </div>
   <div class="empty-state-copy">
-    <h3>Waiting for sensor data</h3>
+    <p class="empty-state-title">Waiting for sensor data</p>
     <p>No readings have arrived yet. Atmosfera will keep checking the data source automatically.</p>
   </div>
 </div>
@@ -318,9 +333,9 @@
 <div class="section-header" id="trend-analysis">
   <h2 class="section-title">Trend Analysis</h2>
   <div class="chart-tabs">
-    <button class="chart-tab active" data-range="1h">1H</button>
-    <button class="chart-tab" data-range="6h">6H</button>
-    <button class="chart-tab" data-range="24h">24H</button>
+    <button class="chart-tab active" data-range="1h" aria-pressed="true">1H</button>
+    <button class="chart-tab" data-range="6h" aria-pressed="false">6H</button>
+    <button class="chart-tab" data-range="24h" aria-pressed="false">24H</button>
   </div>
 </div>
 <div class="chart-section">
@@ -333,13 +348,13 @@
         <div class="legend-item"><div class="legend-dot" style="background:rgba(93,94,97,.3)"></div>WHO Limit</div>
       </div>
     </div>
-    <div class="chart-wrap"><canvas id="chart-aq"
+    <div class="chart-wrap"><canvas id="chart-aq" width="800" height="220"
   role="img"
   aria-label="Line chart showing PM2.5 and PM10 air quality over time"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-header"><div><div class="chart-title">CO2 Level</div><div class="chart-subtitle">ppm over time</div></div></div>
-    <div class="chart-wrap"><canvas id="chart-co2"
+    <div class="chart-wrap"><canvas id="chart-co2" width="800" height="220"
   role="img"
   aria-label="Line chart showing CO2 concentration in ppm over time"></canvas></div>
   </div>
@@ -354,7 +369,7 @@
       <div class="legend-item"><div class="legend-dot" style="background:#006977"></div>Power (W)</div>
     </div>
   </div>
-  <div class="chart-wrap chart-wrap--energy"><canvas id="chart-energy"
+  <div class="chart-wrap chart-wrap--energy"><canvas id="chart-energy" width="800" height="200"
   role="img"
   aria-label="Line chart showing voltage, current, and power consumption over time"></canvas></div>
 </div>
@@ -411,16 +426,16 @@
           <col class="col-energy">
         </colgroup>
         <thead><tr>
-          <th data-sort="time" id="th-time"><span class="th-shell"><span class="th-copy"><span class="th-label">Recorded</span><span class="th-meta">Date and time</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="pm25" id="th-pm25"><span class="th-shell"><span class="th-copy"><span class="th-label">PM2.5</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="pm10" id="th-pm10"><span class="th-shell"><span class="th-copy"><span class="th-label">PM10</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="temp" id="th-temp"><span class="th-shell"><span class="th-copy"><span class="th-label">Temperature</span><span class="th-meta">&deg;C</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="hum" id="th-hum"><span class="th-shell"><span class="th-copy"><span class="th-label">Humidity</span><span class="th-meta">%</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="co2" id="th-co2"><span class="th-shell"><span class="th-copy"><span class="th-label">CO2</span><span class="th-meta">ppm</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="volt" id="th-volt"><span class="th-shell"><span class="th-copy"><span class="th-label">Voltage</span><span class="th-meta">V</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="curr" id="th-curr"><span class="th-shell"><span class="th-copy"><span class="th-label">Current</span><span class="th-meta">A</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="pwr" id="th-pwr"><span class="th-shell"><span class="th-copy"><span class="th-label">Power</span><span class="th-meta">W</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
-          <th data-sort="energy" id="th-energy"><span class="th-shell"><span class="th-copy"><span class="th-label">Energy</span><span class="th-meta">kWh</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="time" id="th-time" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Recorded</span><span class="th-meta">Date and time</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm25" id="th-pm25" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">PM2.5</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pm10" id="th-pm10" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">PM10</span><span class="th-meta">&micro;g/m&sup3;</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="temp" id="th-temp" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Temperature</span><span class="th-meta">&deg;C</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="hum" id="th-hum" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Humidity</span><span class="th-meta">%</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="co2" id="th-co2" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">CO2</span><span class="th-meta">ppm</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="volt" id="th-volt" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Voltage</span><span class="th-meta">V</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="curr" id="th-curr" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Current</span><span class="th-meta">A</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="pwr" id="th-pwr" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Power</span><span class="th-meta">W</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
+          <th data-sort="energy" id="th-energy" aria-sort="none"><span class="th-shell"><span class="th-copy"><span class="th-label">Energy</span><span class="th-meta">kWh</span></span><span class="sort-icon" aria-hidden="true"></span></span></th>
         </tr></thead>
         <tbody id="table-body"></tbody>
       </table>
@@ -428,9 +443,13 @@
     <div class="table-pagination">
       <div class="page-info" id="page-info">-</div>
       <div class="page-buttons">
-        <button class="page-btn" id="btn-prev" disabled>&lt;- Prev</button>
+        <button class="page-btn" id="btn-prev" aria-label="Previous page" disabled>
+          <i class="ti ti-chevron-left" aria-hidden="true"></i> Prev
+        </button>
         <div id="page-numbers"></div>
-        <button class="page-btn" id="btn-next">Next -&gt;</button>
+        <button class="page-btn" id="btn-next" aria-label="Next page">
+          Next <i class="ti ti-chevron-right" aria-hidden="true"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -540,7 +559,7 @@
   <span id="toast-message">Done</span>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
+
 <script type="module" src="/src/app.js"></script>
 </body>
 </html>

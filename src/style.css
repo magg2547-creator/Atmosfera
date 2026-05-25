@@ -1230,10 +1230,18 @@ thead th.sorted[data-sort-dir='desc'] .sort-icon::after {
 }
 .empty-state-copy { min-width: 0; }
 
-.empty-state-copy h3 {
+.empty-state-copy h3,
+.empty-state-title {
   margin: 0 0 4px;
   font-size: 1rem;
   font-weight: 700;
+}
+
+.empty-state-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin-bottom: var(--sp3);
 }
 
 .empty-state-copy p {
