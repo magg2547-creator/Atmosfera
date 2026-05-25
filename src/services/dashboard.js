@@ -61,7 +61,7 @@ const INITIAL_STATE = {
     renderFrame: 0,
     drag: { active: false, anchor: '', current: '', moved: false },
   },
-  fetch: { isFetching: false, countdown: null, uiState: 'idle', lastErrorMessage: null, initialStartedAt: 0 },
+  fetch: { isFetching: false, uiState: 'idle', lastErrorMessage: null, initialStartedAt: 0 },
 };
 
 const store = createReactiveState(INITIAL_STATE);
@@ -144,10 +144,10 @@ const DOM = {
   pageNumbers: () => byId('page-numbers'),
   btnPrev: () => byId('btn-prev'),
   btnNext: () => byId('btn-next'),
-  sortHeaders: () => queryAllCached('thead th[data-sort]'),
+  sortHeaders: () => [...document.querySelectorAll('thead th[data-sort]')],
   rangeChips: () => queryAllCached('[data-range-preset]'),
   pdfPresetButtons: () => queryAllCached('[data-pdf-preset]'),
-  chartTabs: () => queryAllCached('.chart-tab'),
+  chartTabs: () => [...document.querySelectorAll('.chart-tab')],
   toast: () => byId('toast'),
   toastMessage: () => byId('toast-message'),
   btnRefresh: () => byId('btn-refresh'),
@@ -280,7 +280,7 @@ function deltaClass(diff) {
 }
 
 function deltaLabel(diff, unit) {
-  const prefix = diff > 0 ? '^' : diff < 0 ? 'v' : '=';
+  const prefix = diff > 0 ? '▲' : diff < 0 ? '▼' : '=';
   return `${prefix} ${Math.abs(diff).toFixed(1)}${unit}`;
 }
 
@@ -513,7 +513,7 @@ function showEmptyState() {
 function renderEmptyState() {
   batch(() => {
     setState({
-      fetch: { uiState: 'empty' },
+      fetch: { uiState: 'empty', lastErrorMessage: null },
       rows: [],
       filteredRows: [],
       table: { currentPage: 1 },
@@ -586,15 +586,19 @@ async function fetchSheet(options = {}) {
     const rawRows = await requestSheetData(CONFIG);
 
     if (rawRows.length === 0) {
-      setState({
-        fetch: { lastErrorMessage: null, uiState: 'empty' },
-      });
       renderEmptyState();
       startCountdown();
       return;
     }
 
     const normalizedRows = normalizeRows(rawRows.slice(-CONFIG.maxRows));
+
+    if (normalizedRows.length === 0) {
+      renderEmptyState();
+      startCountdown();
+      return; // finally ยังทำงาน → skeleton ซ่อน, is-starting ลบ ✅
+    }
+
     const [currentRow] = normalizedRows;
     const previousRow = normalizedRows[1] ?? currentRow;
 
@@ -779,8 +783,8 @@ function sortRows(rows) {
   const { sortKey, sortDir } = state.table;
 
   return [...rows].sort((left, right) => {
-    const leftValue = sortKey === 'time' ? left.time.getTime() : left[sortKey];
-    const rightValue = sortKey === 'time' ? right.time.getTime() : right[sortKey];
+    const leftValue = sortKey === 'time' ? (left.time?.getTime() ?? 0) : left[sortKey];
+    const rightValue = sortKey === 'time' ? (right.time?.getTime() ?? 0) : right[sortKey];
 
     if (leftValue === rightValue) return 0;
     return sortDir === 1
@@ -1122,20 +1126,21 @@ const FETCH_STATE_CONFIG = {
 };
 
 let hiddenAt = null;
+let countdownIntervalId = null;
 
 function startCountdown(initialSeconds) {
-  clearInterval(state.fetch.countdown);
+  clearInterval(countdownIntervalId);
 
   const cfg = FETCH_STATE_CONFIG[state.fetch.uiState] ?? FETCH_STATE_CONFIG.error;
   let remainingSeconds = initialSeconds ?? cfg.interval;
 
   setText(DOM.lastUpdate(), cfg.label(remainingSeconds));
 
-  state.fetch.countdown = setInterval(() => {
+  countdownIntervalId = setInterval(() => {
     remainingSeconds -= 1;
 
     if (remainingSeconds <= 0) {
-      clearInterval(state.fetch.countdown);
+      clearInterval(countdownIntervalId);
       fetchSheet({ showLoading: true, trigger: 'auto' });
       return;
     }
@@ -1231,6 +1236,7 @@ const {
 
 const pdfPicker = createPdfDatePicker({
   state,
+  setState,
   DOM,
   setText,
   byId,
@@ -1552,7 +1558,7 @@ function bindEvents() {
 
     try {
       await waitForPaint();
-      const didExport = exportPDF(selection.rows, {
+      const didExport = await exportPDF(selection.rows, {
         rangeLabel: selection.rangeLabel,
         fromValue: selection.fromValue,
         toValue: selection.toValue,
@@ -1631,7 +1637,12 @@ export function initApp() {
   tickClock();
   setInterval(tickClock, 1000);
 
-  initCharts(byId, state);
+  try {
+    initCharts(byId, state);
+  } catch (err) {
+    console.error('[Atmosfera] Chart.js init failed:', err);
+    // ดำเนินต่อได้ — chart จะเป็น null แต่ dashboard ยังทำงานได้
+  }
   bindEvents();
   smoothScrollEngine.init();
 

@@ -17,6 +17,11 @@ export function getCharts() {
 }
 
 export function initCharts(byId, state) {
+  if (typeof Chart === 'undefined') {
+    console.warn('[Atmosfera] Chart.js not loaded — charts disabled');
+    return; // graceful fallback แทน throw
+  }
+
   donutLabelPlugin = createDonutLabelPlugin(() => state);
   Chart.register(donutLabelPlugin);
   Chart.defaults.font.family = "'Instrument Sans', sans-serif";
@@ -33,7 +38,17 @@ export function initCharts(byId, state) {
     samples: CONFIG.chartMaxPoints,
   };
 
-  const aqContext = byId('chart-aq').getContext('2d');
+  const chartAqEl = byId('chart-aq');
+  const chartCo2El = byId('chart-co2');
+  const chartEnergyEl = byId('chart-energy');
+  const chartDonutEl = byId('chart-donut');
+
+  if (!chartAqEl || !chartCo2El || !chartEnergyEl || !chartDonutEl) {
+    console.warn('[Atmosfera] One or more chart canvas elements missing from DOM — charts disabled');
+    return;
+  }
+
+  const aqContext = chartAqEl.getContext('2d');
   charts.aq = new Chart(aqContext, {
     type: 'line',
     data: {
@@ -115,7 +130,7 @@ export function initCharts(byId, state) {
     },
   });
 
-  const co2Context = byId('chart-co2').getContext('2d');
+  const co2Context = chartCo2El.getContext('2d');
   charts.co2 = new Chart(co2Context, {
     type: 'line',
     data: {
@@ -175,7 +190,7 @@ export function initCharts(byId, state) {
     },
   });
 
-  const energyContext = byId('chart-energy').getContext('2d');
+  const energyContext = chartEnergyEl.getContext('2d');
   charts.energy = new Chart(energyContext, {
     type: 'line',
     data: {
@@ -254,7 +269,7 @@ export function initCharts(byId, state) {
     },
   });
 
-  const donutContext = byId('chart-donut').getContext('2d');
+  const donutContext = chartDonutEl.getContext('2d');
   charts.donut = new Chart(donutContext, {
     type: 'doughnut',
     data: {

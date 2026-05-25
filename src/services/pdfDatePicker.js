@@ -13,6 +13,7 @@ const PDF_WEEKDAY_LABELS = Object.freeze(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'S
 export function createPdfDatePicker(deps) {
   const {
     state,
+    setState,
     DOM,
     setText,
     getRowsMatchingCurrentSearch,
@@ -25,19 +26,23 @@ export function createPdfDatePicker(deps) {
   } = deps;
 
   function resetPdfDragState() {
-    state.pdfPicker.drag = { active: false, anchor: '', current: '', moved: false };
+    setState({
+      pdfPicker: {
+        drag: { active: false, anchor: '', current: '', moved: false }
+      }
+    });
   }
 
   function resetPdfPendingAnchor() {
-    state.pdfPicker.pendingAnchor = '';
+    setState({ pdfPicker: { pendingAnchor: '' } });
   }
 
   function clearPdfClickSuppression() {
-    state.pdfPicker.suppressClick = false;
+    setState({ pdfPicker: { suppressClick: false } });
   }
 
   function armPdfClickSuppression() {
-    state.pdfPicker.suppressClick = true;
+    setState({ pdfPicker: { suppressClick: true } });
     window.setTimeout(clearPdfClickSuppression, 0);
   }
 
@@ -152,7 +157,7 @@ export function createPdfDatePicker(deps) {
     const nextMonth = addMonths(viewDate, 1);
     const { fromDate, toDate } = getPdfCalendarVisualRange();
 
-    state.pdfPicker.viewDate = viewDate;
+    setState({ pdfPicker: { viewDate } });
 
     const titleText = isMobile
       ? DATE_FORMATTERS.pdfMonth.format(viewDate)
@@ -183,16 +188,17 @@ export function createPdfDatePicker(deps) {
   function cancelScheduledPdfCalendarRender() {
     if (!state.pdfPicker.renderFrame) return;
     cancelAnimationFrame(state.pdfPicker.renderFrame);
-    state.pdfPicker.renderFrame = 0;
+    setState({ pdfPicker: { renderFrame: 0 } });
   }
 
   function schedulePdfCalendarRender() {
     if (state.pdfPicker.renderFrame) return;
 
-    state.pdfPicker.renderFrame = requestAnimationFrame(() => {
-      state.pdfPicker.renderFrame = 0;
+    const frame = requestAnimationFrame(() => {
+      setState({ pdfPicker: { renderFrame: 0 } });
       renderPdfCalendar();
     });
+    setState({ pdfPicker: { renderFrame: frame } });
   }
 
   function refreshPdfPickerUi() {
@@ -213,14 +219,18 @@ export function createPdfDatePicker(deps) {
     if (fromInput) fromInput.value = fromValue || '';
     if (toInput) toInput.value = toValue || '';
 
-    state.pdfPicker.activeField = pendingAnchor ? 'to' : 'from';
-    state.pdfPicker.pendingAnchor = pendingAnchor || '';
-    state.pdfPicker.viewDate = startOfMonth(
-      parseDateInputValue(anchorValue)
-      ?? parseDateInputValue(fromValue)
-      ?? parseDateInputValue(toValue)
-      ?? new Date()
-    );
+    setState({
+      pdfPicker: {
+        activeField: pendingAnchor ? 'to' : 'from',
+        pendingAnchor: pendingAnchor || '',
+        viewDate: startOfMonth(
+          parseDateInputValue(anchorValue)
+          ?? parseDateInputValue(fromValue)
+          ?? parseDateInputValue(toValue)
+          ?? new Date()
+        ),
+      }
+    });
     resetPdfDragState();
 
     refreshPdfPickerUi();
@@ -250,12 +260,16 @@ export function createPdfDatePicker(deps) {
     if (!value) return;
     clearPdfClickSuppression();
     resetPdfPendingAnchor();
-    state.pdfPicker.drag = {
-      active: true,
-      anchor: value,
-      current: value,
-      moved: false,
-    };
+    setState({
+      pdfPicker: {
+        drag: {
+          active: true,
+          anchor: value,
+          current: value,
+          moved: false,
+        }
+      }
+    });
     syncPdfPresetButtons(null);
     renderPdfCalendar();
   }
@@ -264,8 +278,15 @@ export function createPdfDatePicker(deps) {
     if (!state.pdfPicker.drag.active || !value) return;
     if (value === state.pdfPicker.drag.current) return;
 
-    state.pdfPicker.drag.current = value;
-    state.pdfPicker.drag.moved = true;
+    setState({
+      pdfPicker: {
+        drag: {
+          ...state.pdfPicker.drag,
+          current: value,
+          moved: true,
+        }
+      }
+    });
     schedulePdfCalendarRender();
   }
 
@@ -426,12 +447,12 @@ export function createPdfDatePicker(deps) {
     });
 
     DOM.btnPdfPrevMonth()?.addEventListener('click', () => {
-      state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), -1);
+      setState({ pdfPicker: { viewDate: addMonths(getPdfPickerViewDate(), -1) } });
       renderPdfCalendar();
     });
 
     DOM.btnPdfNextMonth()?.addEventListener('click', () => {
-      state.pdfPicker.viewDate = addMonths(getPdfPickerViewDate(), 1);
+      setState({ pdfPicker: { viewDate: addMonths(getPdfPickerViewDate(), 1) } });
       renderPdfCalendar();
     });
 
