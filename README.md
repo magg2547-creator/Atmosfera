@@ -1,6 +1,6 @@
 # Atmosfera
 
-> แดชบอร์ดแสดงผลการตรวจวัดคุณภาพอากาศและปริมาณการใช้พลังงานไฟฟ้าแบบ Real-time — เร็ว ลื่นไหล ไร้รอยต่อ
+> แดชบอร์ดแสดงผลคุณภาพอากาศและการใช้พลังงานแบบ Real-time — เร็ว ลื่นไหล ไร้รอยต่อ
 
 ![License](https://img.shields.io/badge/license-Private-blue)
 ![Stack](https://img.shields.io/badge/stack-Vanilla%20JS%20%7C%20CSS3%20%7C%20Vercel-lightgrey)
@@ -10,10 +10,10 @@
 
 ## ภาพรวม
 
-Atmosfera คือ Web Application ประเภท **Display-Only Dashboard** ที่ทำหน้าที่แสดงผลข้อมูลคุณภาพอากาศ (Air Quality) และปริมาณการใช้พลังงานไฟฟ้า (Energy Consumption) ที่ดึงมาจาก Google Sheets ผ่าน Google Apps Script โดยเน้นประสบการณ์การแสดงผลที่:
+Atmosfera คือ Web Application ประเภท **Display-Only Dashboard** ที่แสดงผลข้อมูลคุณภาพอากาศ (Air Quality) และการใช้พลังงานไฟฟ้า (Energy Consumption) ดึงข้อมูลจาก Google Sheets ผ่าน Google Apps Script โดยเน้นประสบการณ์การแสดงผลที่:
 
 - **Reactive** — UI อัปเดตอัตโนมัติเมื่อข้อมูลเปลี่ยนแปลง ไม่ต้องสั่ง Render เอง
-- **Fluid** — เลื่อนหน้าจอ ลื่นไหลตามธรรมชาติ รองรับทั้ง Mouse Wheel และ Trackpad
+- **Fluid** — เลื่อนหน้าจอลื่นไหลตามธรรมชาติ รองรับทั้ง Mouse Wheel และ Trackpad
 - **Resilient** — ป้องกัน Memory Leak, Layout Shift และ Scroll Hijacking ตั้งแต่ระดับสถาปัตยกรรม
 
 ---
@@ -31,12 +31,12 @@ Atmosfera คือ Web Application ประเภท **Display-Only Dashboard*
 
 ### Reactive State Store
 
-หัวใจของ Atmosfera คือ **Proxy-based Reactive State Store** (`src/store/reactiveState.js`) ที่เปลี่ยนระบบจาก Imperative Render มาเป็น **Data-Driven Observer Pattern**:
+หัวใจของ Atmosfera คือ **Reactive State Store** (`src/store/reactiveState.js`) ที่เปลี่ยนระบบจาก Imperative Render มาเป็น **Data-Driven Observer Pattern**:
 
 ```
 ┌─────────────┐     setState()      ┌───────────────┐
 │  Data Layer │ ──────────────────► │  State Store  │
-│  (Fetcher)  │                     │  (Proxy)      │
+│  (Fetcher)  │                     │  (Observer)   │
 └─────────────┘                     └───────┬───────┘
                                             │ queueMicrotask
                                             ▼
@@ -46,15 +46,17 @@ Atmosfera คือ Web Application ประเภท **Display-Only Dashboard*
                                    └─────────────────┘
 ```
 
-- **`setState(updater)`** — อัปเดตข้อมูลเฉพาะ Path ที่เปลี่ยน คำนวณ Diff อัตโนมัติ
+- **`setState(updater)`** — อัปเดตเฉพาะ Path ที่เปลี่ยน ใช้ Path-targeted comparison แทนการ Clone ทั้ง Tree
 - **`subscribe(path, cb)`** — ลงทะเบียน Listener ที่ทำงานเฉพาะเมื่อ Path ที่สนใจเปลี่ยนแปลง
 - **`batch(fn)`** — รวมการอัปเดตหลายครั้งเป็นการ Notify ครั้งเดียว ป้องกัน Re-render ซ้ำซ้อน
 - **`queueMicrotask`** — ใช้ Microtask Queue แทน `setTimeout` เพื่อความแม่นยำสูงสุด
+- **`structuredClone`** — ใช้ Native API ของ Browser แทน Custom Clone เพื่อประสิทธิภาพที่ดีขึ้น
 
 ### Modularization — Separation of Concerns
 
 | โมดูล | หน้าที่ |
 |---|---|
+| `src/config.js` | Shared configuration — Single source of truth สำหรับค่าคงที่ทั้งโปรเจกต์ |
 | `src/utils/aqiHelper.js` | ถอด Logic การคำนวณเกณฑ์ค่า AQI และ Meta ข้อมูลออกจากไฟล์หลัก |
 | `src/utils/dateHelper.js` | จัดการรูปแบบวันที่และเวลาสำหรับแสดงผล |
 | `src/utils/escapeHtml.js` | ป้องกัน XSS ด้วย HTML Escaping |
@@ -76,7 +78,7 @@ Browser ──► Vercel Edge (/api/data) ──► Google Apps Script ──►
               │  stale-while-revalidate=600   │
 ```
 
-- **`api/data.js`** — Vercel Serverless Function ทำหน้าที่เป็น Middleware ซ่อน `GOOGLE_SCRIPT_URL` และ `API_TOKEN` ไว้ที่ฝั่ง Server ผู้ใช้ไม่เห็น credentials โดยตรง
+- **`api/data.js`** — Vercel Serverless Function ทำหน้าที่เป็น Middleware ซ่อน `GOOGLE_SCRIPT_URL` และ `API_TOKEN` ไว้ที่ฝั่ง Server ผู้ใช้ไม่เห็น Credentials โดยตรง
 - **`vercel.json`** — จัดการ Routing ผ่าน `rewrites` และ `headers` พร้อม Edge Caching แบบ **Stale-While-Revalidate** ป้องกัน Quota Exceeded ของ Google Sheets
 
 ---
@@ -84,25 +86,28 @@ Browser ──► Vercel Edge (/api/data) ──► Google Apps Script ──►
 ## UI/UX Micro-Tuning
 
 ### Native & Fluid Scroll
-ปลดล็อกระบบหน่วงล้อเมาส์แบบเก่า (lerp-based hijacking) หันไปใช้ `scroll-behavior: smooth` ของเบราว์เซอร์ ทำให้ Trackpad / Touchpad ทำงานได้ตามธรรมชาติ 100%
+ใช้ Custom Lerp-based Scroll Engine สำหรับ Mouse Wheel และ Native Scroll สำหรับ Trackpad ทำให้การเลื่อนหน้าจอลื่นไหลตามธรรมชาติในทุกอุปกรณ์
 
 ### Zero Layout Shift Skeleton Loader
-เลเยอร์สเกเลตอนใช้ `position: absolute; inset: 0` ซ้อนทับเนื้อหาเดิม พร้อมเอฟเฟกต์ **Shimmer** แสงวิ่งผ่าน ทำให้กล่องข้อมูลไม่ยุบตัวหรือขยับขณะรอข้อมูล
+Skeleton Layer ใช้ `position: absolute; inset: 0` ซ้อนทับเนื้อหาเดิม พร้อมเอฟเฟกต์ **Shimmer** ทำให้กล่องข้อมูลไม่ยุบตัวหรือขยับขณะรอข้อมูล
 
 ### Smooth Sidebar Navigation & Scroll Spy
 - **`isScrollingFromNav`** — ตัวแปรล็อกสถานะชั่วคราวขณะกดเมนู ป้องกัน Scroll Spy ทำงานซ้ำซ้อน
-- **`will-change: top, height`** — สั่ง GPU รันล่วงหน้า ป้องกันอาการสั่นครืดของ `.nav-indicator`
+- **`will-change: top, height`** — สั่ง GPU รันล่วงหน้าสำหรับ `.nav-indicator`
 - **`requestAnimationFrame`** — เกลี่ยการคำนวณ `getBoundingClientRect()` ให้ตรงกับ Refresh Rate ของจอ
 
-### Premium Modal Backdrop Blur
-จังหวะเปิด PDF Modal ใช้ `backdrop-filter: blur(8px)` พร้อม transition `.35s` ให้ฉากหลังละลายอย่างหรูหรา
+### Page Visibility Aware Countdown
+ใช้ Page Visibility API หยุด Countdown Timer อัตโนมัติเมื่อ Tab ซ่อนอยู่ และ Resume อย่างถูกต้องเมื่อ Tab กลับมา Active — ป้องกัน CPU Waste และการ Fetch ที่ไม่จำเป็น
+
+### Pre-computed Search Index
+แต่ละ Row ใน Dataset มี `_search` field ที่คำนวณล่วงหน้าตอน Normalize ทำให้การกรองข้อมูล Table เป็น O(1) String Lookup แทนการสร้าง String ใหม่ทุกครั้ง
 
 ---
 
 ## โครงสร้างโปรเจกต์
 
 ```
-Atmosfera-main/
+Atmosfera/
 ├── api/
 │   └── data.js                 # Vercel Serverless — Data Proxy Middleware
 ├── assets/
@@ -110,6 +115,7 @@ Atmosfera-main/
 ├── src/
 │   ├── index.html              # Entry Point
 │   ├── app.js                  # Bootstrap — DOMContentLoaded → initApp()
+│   ├── config.js               # Shared configuration constants
 │   ├── style.css               # Design System — Custom Properties, Animations, Layout
 │   ├── charts/
 │   │   ├── dashboardCharts.js  # Chart.js initialization & update pipeline
@@ -142,9 +148,9 @@ Atmosfera-main/
 | Variable | คำอธิบาย | ตัวอย่าง |
 |---|---|---|
 | `GOOGLE_SCRIPT_URL` | URL ของ Google Apps Script Web App | `https://script.google.com/macros/s/.../exec` |
-| `API_TOKEN` | Secret token สำหรับ authenticate กับ Apps Script | `your-secret-token-here` |
+| `API_TOKEN` | Secret Token สำหรับ Authenticate กับ Apps Script | `your-secret-token-here` |
 
-> **หมายเหตุ:** Token ถูกใช้เฉพาะใน Server-to-Server call ระหว่าง Vercel Function และ Google Apps Script ผู้ใช้ปลายทางไม่เห็นค่านี้
+> **หมายเหตุ:** Token ถูกใช้เฉพาะใน Server-to-Server Call ระหว่าง Vercel Function และ Google Apps Script ผู้ใช้ปลายทางไม่เห็นค่านี้
 
 #### Deploy
 
@@ -163,8 +169,8 @@ vercel --prod
 
 ```bash
 # Clone โปรเจกต์
-git clone <repository-url>
-cd Atmosfera-main
+git clone https://github.com/magg2547-creator/Atmosfera.git
+cd Atmosfera
 
 # สร้างไฟล์ .env.local สำหรับตัวแปรสภาพแวดล้อม
 echo "GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/.../exec" >> .env.local
@@ -174,7 +180,7 @@ echo "API_TOKEN=your-secret-token-here" >> .env.local
 vercel dev
 ```
 
-จากนั้นเปิดเบราว์เซอร์ไปที่ `http://localhost:3000`
+จากนั้นเปิด Browser ไปที่ `http://localhost:3000`
 
 ---
 

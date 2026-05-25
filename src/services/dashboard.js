@@ -27,15 +27,7 @@ import {
   resizeAllCharts,
   updateCharts,
 } from '../charts/dashboardCharts.js';
-
-const CONFIG = {
-  sheetUrl: '/api/data',
-  fetchInterval: 60 * 60 * 1000,
-  fetchTimeout: 15 * 1000,
-  maxRows: 3000,
-  rowsPerPage: 10,
-  chartMaxPoints: 60,
-};
+import { CONFIG } from '../config.js';
 
 const METRICS_LIMITS = Object.freeze({
   pm25: { gaugeMax: 200 },
@@ -386,7 +378,7 @@ function getFriendlyPdfRangeLabel(fromVal, toVal) {
 }
 
 function normalizeRow(raw) {
-  return {
+  const row = {
     time: parseTimestamp(raw.timestamp),
     pm25: Number(raw.pm25 ?? 0),
     pm10: Number(raw.pm10 ?? 0),
@@ -398,6 +390,12 @@ function normalizeRow(raw) {
     pwr: normalizePower(raw.power),
     energy: Number(raw.energy ?? 0),
   };
+  row._search = [
+    row.time?.toISOString()?.slice(0, 16) ?? '',
+    row.pm25, row.pm10, row.temp, row.hum,
+    row.co2, row.volt, row.curr, row.pwr, row.energy,
+  ].join(' ').toLowerCase();
+  return row;
 }
 
 function normalizeRows(rawRows) {
@@ -469,9 +467,7 @@ function setSystemStatus(status) {
 
 function resetDeltaBadge(element) {
   if (!element) return;
-  element.className = 'delta delta-flat';
-  element.style.background = 'rgba(255,255,255,.12)';
-  element.style.color = 'rgba(255,255,255,.7)';
+  element.className = 'delta delta-flat delta--reset';
   element.textContent = TXT.emDash;
 }
 
@@ -598,7 +594,7 @@ async function fetchSheet(options = {}) {
       return;
     }
 
-    const normalizedRows = normalizeRows(rawRows);
+    const normalizedRows = normalizeRows(rawRows.slice(-CONFIG.maxRows));
     const [currentRow] = normalizedRows;
     const previousRow = normalizedRows[1] ?? currentRow;
 
@@ -682,9 +678,7 @@ function renderDeltaBadges() {
 
   const co2Delta = DOM.deltaCo2();
   if (co2Delta) {
-    co2Delta.className = 'delta';
-    co2Delta.style.background = 'rgba(255,255,255,.12)';
-    co2Delta.style.color = 'rgba(255,255,255,.7)';
+    co2Delta.className = 'delta delta--reset';
     co2Delta.textContent = deltaLabel(current.co2 - previous.co2, '');
   }
 }
@@ -743,7 +737,7 @@ function renderInsightPanel() {
   if (chartsRef.donut) {
     const percent = Math.max(0, Math.min(100, ((current.co2 - METRICS_LIMITS.co2.baseline) / METRICS_LIMITS.co2.gaugeRange) * 100));
     chartsRef.donut.data.datasets[0].data = [percent, 100 - percent];
-    chartsRef.donut.update();
+    chartsRef.donut.update('none');
   }
 }
 
@@ -752,6 +746,16 @@ function renderDashboard() {
   renderDeltaBadges();
   renderAqiBanner();
   renderInsightPanel();
+}
+
+let tableRenderFrame = 0;
+
+function scheduleRenderTable() {
+  if (tableRenderFrame) return;
+  tableRenderFrame = requestAnimationFrame(() => {
+    tableRenderFrame = 0;
+    renderTable();
+  });
 }
 
 // ── Reactive Subscriptions ──────────────────────────────────
@@ -763,8 +767,8 @@ subscribe('rows', () => {
   recomputeTableView();
   updateCharts(state, DOM, formatTimeShort);
 });
-subscribe('filteredRows', renderTable);
-subscribe('table', renderTable);
+subscribe('filteredRows', scheduleRenderTable);
+subscribe('table', scheduleRenderTable);
 subscribe('fetch.uiState', (s) => {
   if (s.fetch.uiState === 'ready') setSystemStatus('live');
   else if (s.fetch.uiState === 'error') setSystemStatus('offline');
@@ -851,13 +855,7 @@ function matchesSelectedRange(row) {
 
 function matchesSearchQuery(row, query = DOM.tableSearch()?.value.toLowerCase().trim() || '') {
   if (!query) return true;
-
-  const dateStr = row.time.toISOString().slice(0, 10);
-  const timeStr = row.time.toTimeString().slice(0, 8);
-
-  const haystack = `${dateStr} ${timeStr} ${row.pm25} ${row.pm10} ${row.temp} ${row.hum} ${row.co2} ${row.volt} ${row.curr} ${row.pwr} ${row.energy}`;
-
-  return haystack.toLowerCase().includes(query);
+  return row._search.includes(query);
 }
 
 function filterRows(rows) {
@@ -948,7 +946,6 @@ function recomputeTableView() {
       syncRangeControls();
       syncSortIndicators();
       setText(DOM.rangeSummary(), 'Date range: No records yet');
-      renderTable();
       return;
     }
 
@@ -958,8 +955,6 @@ function recomputeTableView() {
     syncSortIndicators();
 
     setText(DOM.rangeSummary(), getRangeSummaryText(state.filteredRows.length));
-
-    renderTable();
   });
 }
 
@@ -1028,8 +1023,6 @@ function renderTable() {
   if (!tbody) return;
 
   // Fade out → update → fade in
-  tbody.classList.add('is-fading');
-  const updateContent = () => {
   if (state.rows.length === 0) {
     tbody.innerHTML = `
       <tr class="table-empty-state">
@@ -1101,59 +1094,34 @@ function renderTable() {
 
   pageNumbers.replaceChildren(fragment);
 
-  };  // end updateContent
-
-  // Fade out → wait for transitionend → update → fade in
-  tbody.classList.add('is-fading');
-  tbody.addEventListener('transitionend', () => {
-    updateContent();
-    requestAnimationFrame(() => tbody.classList.remove('is-fading'));
-  }, { once: true });
 }
 
-function getRefreshIntervalSeconds() {
-  switch (state.fetch.uiState) {
-    case 'ready':
-      return 3600; // 1 à¸Šà¸±à¹ˆà¸§à¹‚à¸¡à¸‡
-    case 'empty':
-      return 30;   // 30 à¸§à¸´à¸™à¸²à¸—à¸µ
-    case 'error':
-      return 30;   // 30 à¸§à¸´à¸™à¸²à¸—à¸µ
-    default:
-      return 30;
-  }
-}
 
-function getRefreshCountdownText(remainingSeconds) {
-  switch (state.fetch.uiState) {
-    case 'ready': {
-      const hours = Math.floor(remainingSeconds / 3600);
-      const minutes = Math.floor((remainingSeconds % 3600) / 60);
-      const seconds = remainingSeconds % 60;
+const FETCH_STATE_CONFIG = {
+  ready: {
+    interval: 3600,
+    label: (s) => {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return h > 0
+        ? `Refresh in ${h}h ${m}m`
+        : `Refresh in ${m}:${String(sec).padStart(2, '0')}`;
+    },
+  },
+  empty: { interval: 30, label: (s) => `Checking again in ${s}s` },
+  error: { interval: 30, label: (s) => `Retrying in ${s}s` },
+};
 
-      if (hours > 0) {
-        return `Refresh in ${hours}h ${minutes}m`;
-      }
-      return `Refresh in ${minutes}:${String(seconds).padStart(2, '0')}`;
-    }
+let hiddenAt = null;
 
-    case 'empty':
-      return `Checking again in ${remainingSeconds}s`;
-
-    case 'error':
-      return `Retrying in ${remainingSeconds}s`;
-
-    default:
-      return `Refresh in ${remainingSeconds}s`;
-  }
-}
-
-function startCountdown() {
+function startCountdown(initialSeconds) {
   clearInterval(state.fetch.countdown);
 
-  let remainingSeconds = getRefreshIntervalSeconds();
+  const cfg = FETCH_STATE_CONFIG[state.fetch.uiState] ?? FETCH_STATE_CONFIG.error;
+  let remainingSeconds = initialSeconds ?? cfg.interval;
 
-  setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
+  setText(DOM.lastUpdate(), cfg.label(remainingSeconds));
 
   state.fetch.countdown = setInterval(() => {
     remainingSeconds -= 1;
@@ -1164,7 +1132,7 @@ function startCountdown() {
       return;
     }
 
-    setText(DOM.lastUpdate(), getRefreshCountdownText(remainingSeconds));
+    setText(DOM.lastUpdate(), cfg.label(remainingSeconds));
   }, 1000);
 }
 
@@ -1275,9 +1243,13 @@ function tickClock() {
 const manualRefresh = createManualRefresh({ state, fetchSheet });
 
 let isScrollingFromNav = false;
+let activeNavHash = '';
 
-function setActiveNavLink(hash) {
+function setActiveNavLink(hash, options = {}) {
   const normalizedHash = hash || '#main-content';
+  const force = options.force === true;
+  if (!force && activeNavHash === normalizedHash) return;
+
   let activeLink = null;
 
   document.querySelectorAll('.nav-link').forEach(link => {
@@ -1294,6 +1266,7 @@ function setActiveNavLink(hash) {
 
   // Slide the nav indicator to the active link
   moveNavIndicator(activeLink);
+  activeNavHash = normalizedHash;
 }
 
 let navIndicator = null;
@@ -1314,7 +1287,7 @@ function moveNavIndicator(activeLink) {
   const menuRect = menu.getBoundingClientRect();
   const linkRect = activeLink.getBoundingClientRect();
 
-  navIndicator.style.top = `${linkRect.top - menuRect.top}px`;
+  navIndicator.style.transform = `translateY(${linkRect.top - menuRect.top}px)`;
   navIndicator.style.height = `${linkRect.height}px`;
 }
 
@@ -1386,7 +1359,7 @@ function pickActiveSectionFromScroll() {
 
 function syncActiveNavLink() {
   if (navSelectionLockHash) {
-    setActiveNavLink(navSelectionLockHash);
+    setActiveNavLink(navSelectionLockHash, { force: true });
     return;
   }
 
@@ -1396,78 +1369,24 @@ function syncActiveNavLink() {
 
 // ── Custom Smooth Scroll Engine (Lerp-based) ────────────────
 const smoothScrollEngine = (() => {
-  const LERP_FACTOR = 0.06;
-  const SNAP_THRESHOLD = 0.5;
-  const TRACKPAD_AVG_DELTA = 28;
-  const TRACKPAD_WINDOW_MS = 250;
-  const TRACKPAD_MIN_EVENTS = 3;
   const SCROLL_PADDING = 80;
 
-  let currentY = window.scrollY;
   let targetY = window.scrollY;
   let rafId = null;
-  let recentDeltas = [];
-  let activeNavLink = null;
-
-  function isTrackpad() {
-    const now = performance.now();
-    recentDeltas = recentDeltas.filter(d => now - d.time < TRACKPAD_WINDOW_MS);
-    if (recentDeltas.length < TRACKPAD_MIN_EVENTS) return false;
-    const avg = recentDeltas.reduce((sum, d) => sum + Math.abs(d.value), 0) / recentDeltas.length;
-    return avg < TRACKPAD_AVG_DELTA;
-  }
 
   function getMaxScroll() {
     return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   }
 
-  function tick() {
-    currentY += (targetY - currentY) * LERP_FACTOR;
-
-    if (Math.abs(currentY - targetY) < SNAP_THRESHOLD) {
-      currentY = targetY;
-      window.scrollTo(0, currentY);
-      rafId = null;
-      return;
-    }
-
-    window.scrollTo(0, currentY);
-    rafId = requestAnimationFrame(tick);
-  }
-
   function startAnimation() {
     targetY = Math.max(0, Math.min(targetY, getMaxScroll()));
-    if (!rafId) {
-      currentY = window.scrollY;
-      rafId = requestAnimationFrame(tick);
-    }
-  }
-
-  // Wheel handler
-  function onWheel(e) {
-    if (e.ctrlKey || e.metaKey) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    recentDeltas.push({ value: e.deltaY, time: performance.now() });
-
-    if (isTrackpad()) return;
-
-    e.preventDefault();
-    targetY += e.deltaY * 1.15;
-    startAnimation();
-  }
-
-  // Sync on native scroll (keyboard, scrollbar drag, trackpad)
-  function onNativeScroll() {
-    if (!rafId) {
-      currentY = window.scrollY;
-      targetY = window.scrollY;
-    }
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: targetY, behavior: reduceMotion ? 'auto' : 'smooth' });
+    rafId = requestAnimationFrame(() => { rafId = null; });
   }
 
   function init() {
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('scroll', onNativeScroll, { passive: true });
+    targetY = window.scrollY;
   }
 
   function scrollTo(element) {
@@ -1478,7 +1397,7 @@ const smoothScrollEngine = (() => {
   }
 
   function setActiveLink(link) {
-    activeNavLink = link;
+    void link;
   }
 
   function getTargetY() {
@@ -1490,12 +1409,8 @@ const smoothScrollEngine = (() => {
   }
 
   function destroy() {
-    window.removeEventListener('wheel', onWheel);
-    window.removeEventListener('scroll', onNativeScroll);
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
-    recentDeltas = [];
-    activeNavLink = null;
   }
 
   return { init, scrollTo, setActiveLink, destroy, getTargetY, isAnimating };
@@ -1560,7 +1475,7 @@ function bindSidebarNavigation() {
   window.addEventListener('scroll', scheduleScrollSpyUpdate, { passive: true });
   window.addEventListener('resize', () => {
     measureNavSectionMetrics();
-    syncActiveNavLink();
+    setActiveNavLink(activeNavHash, { force: true });
   });
   window.addEventListener('load', syncActiveNavLink);
   syncActiveNavLink();
@@ -1643,7 +1558,11 @@ function bindEvents() {
 
   pdfPicker.bindCalendarEvents();
 
-  DOM.tableSearch()?.addEventListener('input', recomputeTableView);
+  let searchTimer = null;
+  DOM.tableSearch()?.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(recomputeTableView, 120);
+  });
 
   DOM.tableSortSelect()?.addEventListener('change', event => {
     applySortKey(event.target.value);
@@ -1679,7 +1598,7 @@ function bindEvents() {
   });
 
   DOM.chartTabs().forEach(tab => {
-    tab.addEventListener('click', () => applyChartRange(tab.dataset.range, state, DOM, formatTimeShort));
+    tab.addEventListener('click', () => applyChartRange(tab.dataset.range, state, DOM, formatTimeShort, setState));
   });
 
   DOM.btnErrorRetry()?.addEventListener('click', manualRefresh);
@@ -1713,7 +1632,7 @@ export function initApp() {
   requestAnimationFrame(() => resizeAllCharts());
   requestAnimationFrame(() => {
     document.documentElement.classList.remove('is-booting');
-    setActiveNavLink('#main-content');
+    setActiveNavLink('#main-content', { force: true });
   });
 
   // ── Scroll Reveal Animations ──────────────────────────────
@@ -1721,6 +1640,23 @@ export function initApp() {
 
   // ── Hero Parallax ─────────────────────────────────────────
   initHeroParallax();
+
+  // ── Page Visibility API ───────────────────────────────────
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      clearInterval(state.fetch.countdown);
+    } else if (hiddenAt !== null) {
+      const elapsed = Math.floor((Date.now() - hiddenAt) / 1000);
+      hiddenAt = null;
+      const cfg = FETCH_STATE_CONFIG[state.fetch.uiState] ?? FETCH_STATE_CONFIG.error;
+      if (elapsed >= cfg.interval) {
+        fetchSheet({ showLoading: true, trigger: 'auto' });
+      } else {
+        startCountdown(cfg.interval - elapsed);
+      }
+    }
+  });
 }
 
 function initScrollReveal() {
@@ -1892,6 +1828,3 @@ window.addEventListener('resize', () => {
     pdfPicker.handleResize();
   }, 120);
 });
-
-
-

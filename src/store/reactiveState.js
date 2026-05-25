@@ -1,13 +1,3 @@
-function deepClone(obj) {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone);
-  const clone = {};
-  for (const key of Object.keys(obj)) {
-    clone[key] = deepClone(obj[key]);
-  }
-  return clone;
-}
-
 function getPathValue(obj, path) {
   return path.split('.').reduce((acc, part) => acc?.[part], obj);
 }
@@ -28,7 +18,7 @@ function pathMatches(subscriberPath, changedPath) {
 }
 
 export function createReactiveState(initialState) {
-  let state = deepClone(initialState);
+  let state = structuredClone(initialState);
   const subscribers = new Map();
   let batchDepth = 0;
   let pendingPaths = new Set();
@@ -92,7 +82,6 @@ export function createReactiveState(initialState) {
   }
 
   function setState(updater) {
-    const prevState = deepClone(state);
     const updates = typeof updater === 'function' ? updater(state) : updater;
 
     if (typeof updates === 'object' && updates !== null) {
@@ -101,7 +90,7 @@ export function createReactiveState(initialState) {
       function collectChanges(obj, prefix = '') {
         for (const key of Object.keys(obj)) {
           const fullPath = prefix ? `${prefix}.${key}` : key;
-          const prevValue = getPathValue(prevState, fullPath);
+          const prevValue = getPathValue(state, fullPath);
           const newValue = obj[key];
 
           if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {

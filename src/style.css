@@ -259,6 +259,7 @@ nav {
 }
 .nav-indicator {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
   border-radius: calc(var(--r-lg) - 4px);
@@ -267,8 +268,8 @@ nav {
   pointer-events: none;
   z-index: 0;
   /* ใช้ cubic-bezier สไตล์ Apple เพื่อความพริ้วไหวสูงสุด */
-  transition: top 0.38s cubic-bezier(0.25, 1, 0.5, 1), height 0.38s cubic-bezier(0.25, 1, 0.5, 1);
-  will-change: top, height; /* เปิดฮาร์ดแวร์เร่งความเร็ว 60fps+ */
+  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), height 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
 }
 .nav-link {
   position: relative;
@@ -666,6 +667,10 @@ nav {
 .delta-up   { background: rgba(25,121,111,.12); color: var(--tertiary); }
 .delta-down { background: rgba(154,91,88,.12); color: var(--error); }
 .delta-flat { background: rgba(255,255,255,.32); color: var(--on-surface-variant); }
+.delta--reset {
+  background: rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .7);
+}
 
 /* ── SKELETON LOADING ── */
 .skeleton-block {

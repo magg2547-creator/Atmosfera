@@ -1,8 +1,5 @@
 import { createDonutLabelPlugin } from './plugins.js';
-
-const CONFIG = {
-  chartMaxPoints: 60,
-};
+import { CONFIG } from '../config.js';
 
 const charts = { aq: null, co2: null, energy: null, donut: null };
 
@@ -298,8 +295,8 @@ export function getRowsForChartRange(rangeKey, state) {
   return filtered.slice(-CONFIG.chartMaxPoints);
 }
 
-export function applyChartRange(rangeKey, state, DOM, formatTimeShort) {
-  state.chartRange = rangeKey;
+export function applyChartRange(rangeKey, state, DOM, formatTimeShort, setState = null) {
+  if (setState) setState({ chartRange: rangeKey });
 
   DOM.chartTabs().forEach(tab => {
     tab.classList.toggle('active', tab.dataset.range === rangeKey);
