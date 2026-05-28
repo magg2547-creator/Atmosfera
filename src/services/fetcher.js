@@ -37,7 +37,8 @@ export function createManualRefresh({ state, fetchSheet }) {
   return function manualRefresh() {
     if (state.fetch.isFetching) return;
 
-    clearInterval(state.fetch.countdown);
+    // countdownIntervalId is cleared inside startCountdown() called by fetchSheet,
+    // so no explicit clearInterval needed here.
     fetchSheet({ showLoading: true, trigger: 'manual' });
   };
 }

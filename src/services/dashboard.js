@@ -1659,7 +1659,7 @@ export function initApp() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       hiddenAt = Date.now();
-      clearInterval(state.fetch.countdown);
+      clearInterval(countdownIntervalId);
     } else if (hiddenAt !== null) {
       const elapsed = Math.floor((Date.now() - hiddenAt) / 1000);
       hiddenAt = null;
