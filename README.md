@@ -78,7 +78,7 @@ Browser ──► Vercel Edge (/api/data) ──► Google Apps Script ──►
               │  stale-while-revalidate=600   │
 ```
 
-- **`api/data.js`** — Vercel Serverless Function ทำหน้าที่เป็น Middleware ซ่อน `GOOGLE_SCRIPT_URL` และ `API_TOKEN` ไว้ที่ฝั่ง Server ผู้ใช้ไม่เห็น Credentials โดยตรง
+- **`api/data.js`** — Vercel Serverless Function ทำหน้าที่เป็น Middleware ซ่อน `GOOGLE_SCRIPT_URL` ไว้ที่ฝั่ง Server ผู้ใช้ไม่เห็น URL ต้นทางโดยตรง
 - **`vercel.json`** — จัดการ Routing ผ่าน `rewrites` และ `headers` พร้อม Edge Caching แบบ **Stale-While-Revalidate** ป้องกัน Quota Exceeded ของ Google Sheets
 
 ---
@@ -148,9 +148,9 @@ Atmosfera/
 | Variable | คำอธิบาย | ตัวอย่าง |
 |---|---|---|
 | `GOOGLE_SCRIPT_URL` | URL ของ Google Apps Script Web App | `https://script.google.com/macros/s/.../exec` |
-| `API_TOKEN` | Secret Token สำหรับ Authenticate กับ Apps Script | `your-secret-token-here` |
+| `API_TOKEN` | Secret Token สำหรับ Authenticate กับ Apps Script (ไม่จำเป็น ถ้า Apps Script ไม่ได้ตรวจ token) | `your-secret-token-here` |
 
-> **หมายเหตุ:** Token ถูกใช้เฉพาะใน Server-to-Server Call ระหว่าง Vercel Function และ Google Apps Script ผู้ใช้ปลายทางไม่เห็นค่านี้
+> **หมายเหตุ:** ถ้า Apps Script ไม่ได้ตรวจ token ให้ตั้งเฉพาะ `GOOGLE_SCRIPT_URL` ได้เลย
 
 #### Deploy
 
@@ -174,7 +174,8 @@ cd Atmosfera
 
 # สร้างไฟล์ .env.local สำหรับตัวแปรสภาพแวดล้อม
 echo "GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/.../exec" >> .env.local
-echo "API_TOKEN=your-secret-token-here" >> .env.local
+# Optional: ตั้งเฉพาะกรณี Apps Script ตรวจ token
+# echo "API_TOKEN=your-secret-token-here" >> .env.local
 
 # รัน development server
 vercel dev

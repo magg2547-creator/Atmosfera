@@ -4,30 +4,22 @@
 //  เพื่อซ่อน credentials และเพิ่มความปลอดภัย
 //
 //  Environment Variables ที่ต้องตั้งค่า:
-//    API_TOKEN          — Secret token สำหรับ authenticate กับ Google Script
 //    GOOGLE_SCRIPT_URL  — URL ของ Google Apps Script web app
+//    API_TOKEN          — Optional secret token, only if the script requires it
 // ─────────────────────────────────────────────────────────────
 
 const FETCH_TIMEOUT_MS = 15_000; // 15 วินาที
 
 export default async function handler(req, res) {
   // ── 1. ตรวจสอบ Environment Variables ──────────────────────
-  const token = process.env.API_TOKEN;
   const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL;
+  const token = process.env.API_TOKEN;
 
   if (!googleScriptUrl) {
     console.error('[Atmosfera] Missing GOOGLE_SCRIPT_URL environment variable');
     return res.status(500).json({
       status: 'error',
       message: 'Server configuration error: missing GOOGLE_SCRIPT_URL',
-    });
-  }
-
-  if (!token) {
-    console.error('[Atmosfera] Missing API_TOKEN environment variable');
-    return res.status(500).json({
-      status: 'error',
-      message: 'Server configuration error: missing API_TOKEN',
     });
   }
 
@@ -38,18 +30,10 @@ export default async function handler(req, res) {
   try {
     // ── 3. เรียก doGet ใน Google Apps Script ─────────────────
     //
-    //  Security note:
-    //  Token อยู่ใน URL query string เพราะ Apps Script's doGet() อ่านจาก
-    //  e.parameter.token เท่านั้น (custom headers ถูก Google strip ออก)
-    //
-    //  สาเหตุที่ยังปลอดภัย:
-    //  - Browser เรียก /api/data (ไม่มี token)
-    //  - Server (Vercel/Node) เรียก Google Script (มี token) — server-to-server
-    //  - Token ไม่เคยถูกเปิดเผยให้ผู้ใช้เห็น
-    //
-    //  ⚠️ ควรเก็บ token ใน Script Properties ด้วย (ไม่ hardcode ใน script)
     const url = new URL(googleScriptUrl);
-    url.searchParams.set('token', token);
+    if (token) {
+      url.searchParams.set('token', token);
+    }
 
     const response = await fetch(url.toString(), {
       method: 'GET',
